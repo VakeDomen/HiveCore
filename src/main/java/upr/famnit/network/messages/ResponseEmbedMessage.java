@@ -1,7 +1,6 @@
-package upr.famnit.network;
+package upr.famnit.network.messages;
 
 import com.google.gson.annotations.SerializedName;
-import upr.famnit.network.Message;
 
 import java.util.List;
 

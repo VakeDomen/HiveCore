@@ -1,6 +1,7 @@
 package upr.famnit.network;
 
 import com.google.gson.*;
+import upr.famnit.network.messages.*;
 
 import java.lang.reflect.Type;
 

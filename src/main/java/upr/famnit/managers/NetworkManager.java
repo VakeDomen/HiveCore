@@ -1,7 +1,7 @@
 package upr.famnit.managers;
 
 import org.java_websocket.WebSocket;
-import upr.famnit.network.Message;
+import upr.famnit.network.messages.Message;
 import upr.famnit.network.Peer;
 import upr.famnit.network.Server;
 

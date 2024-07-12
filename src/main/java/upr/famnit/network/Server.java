@@ -6,6 +6,8 @@ import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
 import upr.famnit.managers.NetworkManager;
+import upr.famnit.network.messages.AuthenticationMessage;
+import upr.famnit.network.messages.Message;
 import upr.famnit.util.Logger;
 import upr.famnit.util.LogLevel;
 
