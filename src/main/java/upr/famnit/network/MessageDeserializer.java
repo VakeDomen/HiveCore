@@ -12,14 +12,14 @@ public class MessageDeserializer implements JsonDeserializer<Message> {
         String type = jsonObject.get("type").getAsString();
 
         return switch (type) {
-            case "authentication" -> context.deserialize(jsonObject, AuthenticationMessage.class);
-            case "submitPrompt" -> context.deserialize(jsonObject, SubmitPromptMessage.class);
-            case "responsePrompt" -> context.deserialize(jsonObject, ResponsePromptMessage.class);
-            case "responsePromptToken" -> context.deserialize(jsonObject, ResponsePromptTokenMessage.class);
-            case "error" -> context.deserialize(jsonObject, ErrorMessage.class);
-            case "submitEmbed" -> context.deserialize(jsonObject, SubmitEmbedMessage.class);
-            case "responseEmbed" -> context.deserialize(jsonObject, ResponseEmbedMessage.class);
-            default -> throw new JsonParseException("Unknown type: " + type);
+            case "Authentication" -> context.deserialize(jsonObject, AuthenticationMessage.class);
+            case "SubmitPrompt" -> context.deserialize(jsonObject, SubmitPromptMessage.class);
+            case "ResponsePrompt" -> context.deserialize(jsonObject, ResponsePromptMessage.class);
+            case "ResponsePromptToken" -> context.deserialize(jsonObject, ResponsePromptTokenMessage.class);
+            case "Error" -> context.deserialize(jsonObject, ErrorMessage.class);
+            case "SubmitEmbed" -> context.deserialize(jsonObject, SubmitEmbedMessage.class);
+            case "ResponseEmbed" -> context.deserialize(jsonObject, ResponseEmbedMessage.class);
+            default -> null;
         };
     }
 }

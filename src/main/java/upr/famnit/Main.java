@@ -4,6 +4,6 @@ import upr.famnit.managers.NetworkManager;
 
 public class Main {
     public static void main(String[] args) {
-        NetworkManager networkManager = new NetworkManager(1337);
+        NetworkManager networkManager = new NetworkManager(3444);
     }
 }

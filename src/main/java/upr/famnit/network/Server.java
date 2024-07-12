@@ -19,8 +19,8 @@ public class Server extends WebSocketServer {
     GsonBuilder gsonBuilder;
     Gson gson;
     NetworkManager networkManager;
-    public Server(InetSocketAddress address, NetworkManager networkManager) {
-        super(address);
+    public Server(int port, NetworkManager networkManager) {
+        super(new InetSocketAddress(port));
         this.networkManager = networkManager;
         gsonBuilder = new GsonBuilder();
         gsonBuilder.registerTypeAdapter(Message.class, new MessageDeserializer());
@@ -45,6 +45,13 @@ public class Server extends WebSocketServer {
     @Override
     public void onMessage(WebSocket webSocket, String s) {
         Message message = gson.fromJson(s, Message.class);
+        if(message==null){
+            Logger.log("Protocol violation: Unknown message type from client : " + webSocket.getRemoteSocketAddress(),LogLevel.network);
+            webSocket.close();
+        }
+
+        webSocket.send(s);
+        /*
         if (message instanceof AuthenticationMessage authMessage) {
             System.out.println("Type: " + authMessage.getType());
             System.out.println("Token: " + authMessage.getBody().getToken());
@@ -54,7 +61,7 @@ public class Server extends WebSocketServer {
                 Logger.log("Driver: " + hw.getDriver(), LogLevel.info);
                 Logger.log("CUDA: " + hw.getCuda(), LogLevel.info);
             }
-        }
+        }*/
     }
 
     @Override

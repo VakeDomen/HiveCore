@@ -19,8 +19,7 @@ public class NetworkManager {
 
     public NetworkManager(int port) {
         this.server = new Server(
-                new InetSocketAddress("localhost", port),
-                this);
+             port, this);
         this.server.start();
     }
 }
