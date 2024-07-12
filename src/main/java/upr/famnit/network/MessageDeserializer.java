@@ -11,23 +11,15 @@ public class MessageDeserializer implements JsonDeserializer<Message> {
         JsonObject jsonObject = json.getAsJsonObject();
         String type = jsonObject.get("type").getAsString();
 
-        switch (type) {
-            case "authentication":
-                return context.deserialize(jsonObject, AuthenticationMessage.class);
-            case "submitPrompt":
-                return context.deserialize(jsonObject, SubmitPromptMessage.class);
-            case "responsePrompt":
-                return context.deserialize(jsonObject, ResponsePromptMessage.class);
-            case "responsePromptToken":
-                return context.deserialize(jsonObject, ResponsePromptTokenMessage.class);
-            case "error":
-                return context.deserialize(jsonObject, ErrorMessage.class);
-            case "submitEmbed":
-                return context.deserialize(jsonObject, SubmitEmbedMessage.class);
-            case "responseEmbed":
-                return context.deserialize(jsonObject, ResponseEmbedMessage.class);
-            default:
-                throw new JsonParseException("Unknown type: " + type);
-        }
+        return switch (type) {
+            case "authentication" -> context.deserialize(jsonObject, AuthenticationMessage.class);
+            case "submitPrompt" -> context.deserialize(jsonObject, SubmitPromptMessage.class);
+            case "responsePrompt" -> context.deserialize(jsonObject, ResponsePromptMessage.class);
+            case "responsePromptToken" -> context.deserialize(jsonObject, ResponsePromptTokenMessage.class);
+            case "error" -> context.deserialize(jsonObject, ErrorMessage.class);
+            case "submitEmbed" -> context.deserialize(jsonObject, SubmitEmbedMessage.class);
+            case "responseEmbed" -> context.deserialize(jsonObject, ResponseEmbedMessage.class);
+            default -> throw new JsonParseException("Unknown type: " + type);
+        };
     }
 }
