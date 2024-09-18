@@ -5,41 +5,41 @@ import java.net.ServerSocket;
 import java.net.Socket;
 
 /**
- * Handles the connection from the Rust Node.
+ * Handles the connection from the Node.
  */
 public class NodeConnectionManager {
-    private ServerSocket rustNodeServerSocket;
-    private Socket rustNodeSocket;
+    private ServerSocket nodeServerSocket;
+    private Socket nodeSocket;
 
     public NodeConnectionManager(int port) throws IOException {
-        rustNodeServerSocket = new ServerSocket(port);
+        nodeServerSocket = new ServerSocket(port);
     }
 
     /**
-     * Accepts a connection from the Rust Node.
+     * Accepts a connection from the Node.
      */
     public void acceptConnection() throws IOException {
-        System.out.println("Waiting for Rust node to connect...");
-        rustNodeSocket = rustNodeServerSocket.accept();
-        System.out.println("Rust node connected: " + rustNodeSocket.getInetAddress());
+        System.out.println("Waiting for worker node to connect...");
+        nodeSocket = nodeServerSocket.accept();
+        System.out.println("Worker node connected: " + nodeSocket.getInetAddress());
     }
 
     /**
-     * Gets the connected Rust Node socket.
+     * Gets the connected Node socket.
      */
-    public Socket getRustNodeSocket() {
-        return rustNodeSocket;
+    public Socket getNodeSocket() {
+        return nodeSocket;
     }
 
     /**
-     * Closes the server socket and the Rust Node socket.
+     * Closes the server socket and the Node socket.
      */
     public void close() throws IOException {
-        if (rustNodeSocket != null) {
-            rustNodeSocket.close();
+        if (nodeSocket != null) {
+            nodeSocket.close();
         }
-        if (rustNodeServerSocket != null) {
-            rustNodeServerSocket.close();
+        if (nodeServerSocket != null) {
+            nodeServerSocket.close();
         }
     }
 }

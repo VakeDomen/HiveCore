@@ -1,7 +1,8 @@
 package upr.famnit;
 
-//import upr.famnit.managers.NetworkManager;
 import upr.famnit.managers.NodeConnectionManager;
+import upr.famnit.util.Logger;
+import upr.famnit.util.LogLevel;
 
 import java.io.*;
 import java.net.ServerSocket;
@@ -14,47 +15,54 @@ import java.util.Map;
 
 public class Main {
     private static final int PROXY_PORT = 6666;      // Port for client connections
-    private static final int RUST_NODE_PORT = 7777;  // Port for Rust Node connection
+    private static final int RUST_NODE_PORT = 7777;  // Port for Node connection
 
     public static void main(String[] args) {
         try {
-            // Start the Rust Node connection handler
-            NodeConnectionManager rustNodeHandler = new NodeConnectionManager(RUST_NODE_PORT);
+            // Start the Node connection handler
+            NodeConnectionManager nodeHandler = new NodeConnectionManager(RUST_NODE_PORT);
             new Thread(() -> {
                 try {
-                    rustNodeHandler.acceptConnection();
+                    nodeHandler.acceptConnection();
                 } catch (IOException e) {
+                    Logger.log("Error accepting connection from Rust Node: " + e.getMessage(), LogLevel.error);
                     e.printStackTrace();
                 }
             }).start();
 
             // Start the proxy server for clients
             ServerSocket serverSocket = new ServerSocket(PROXY_PORT);
-            System.out.println("Proxy server is running on port " + PROXY_PORT + "...");
+            Logger.log("Proxy server is running on port " + PROXY_PORT + "...");
 
-            // Wait for the Rust Node to connect
-            while (rustNodeHandler.getRustNodeSocket() == null) {
+            // Wait for the Node to connect
+            while (nodeHandler.getNodeSocket() == null) {
                 Thread.sleep(100);
             }
+
+            // Log when Rust Node is connected
+            Logger.log("Rust Node connected: " + nodeHandler.getNodeSocket().getRemoteSocketAddress(), LogLevel.network);
 
             while (true) {
                 // Accept incoming client connection
                 Socket clientSocket = serverSocket.accept();
-                // Handle the request in a new thread, passing the Rust Node socket
-                new Thread(() -> handleClientRequest(clientSocket, rustNodeHandler.getRustNodeSocket())).start();
+                Logger.log("Client connected: " + clientSocket.getRemoteSocketAddress(), LogLevel.network);
+
+                // Handle the request in a new thread, passing the Node socket
+                new Thread(() -> handleClientRequest(clientSocket, nodeHandler.getNodeSocket())).start();
             }
         } catch (IOException | InterruptedException e) {
+            Logger.log("An error occurred in the main thread: " + e.getMessage(), LogLevel.error);
             e.printStackTrace();
         }
     }
 
     /**
-     * Handles client requests by forwarding them to the Rust Node and returning the response.
+     * Handles client requests by forwarding them to the Node and returning the response.
      *
      * @param clientSocket   The client's socket connection.
-     * @param rustNodeSocket The Rust Node's socket connection.
+     * @param nodeSocket The Node's socket connection.
      */
-    private static void handleClientRequest(Socket clientSocket, Socket rustNodeSocket) {
+    private static void handleClientRequest(Socket clientSocket, Socket nodeSocket) {
         try {
             // Set a timeout for the client socket
             clientSocket.setSoTimeout(30000);  // 30 seconds timeout
@@ -66,7 +74,7 @@ public class Main {
             // Read the client's request line
             String requestLine = readLine(clientInputStream);
             if (requestLine == null || requestLine.isEmpty()) {
-                System.out.println("Received empty request. Closing connection.");
+                Logger.log("Received empty request from client. Closing connection.", LogLevel.warn);
                 clientSocket.close();
                 return;
             }
@@ -75,36 +83,40 @@ public class Main {
             String[] requestParts = requestLine.split(" ");
             String method = requestParts[0];
             String uri = requestParts[1];
-            System.out.println("Request Line: " + requestLine);
+            Logger.log("Request Line: " + requestLine, LogLevel.info);
 
             // Read the request headers
             Map<String, String> requestHeaders = readRequestHeaders(clientInputStream);
+            Logger.log("Request Headers: " + requestHeaders.toString(), LogLevel.info);
             int contentLength = getContentLength(requestHeaders);
 
             // Read the request body if present
             byte[] requestBody = null;
             if (("POST".equalsIgnoreCase(method) || "PUT".equalsIgnoreCase(method)) && contentLength > 0) {
                 requestBody = readRequestBody(clientInputStream, contentLength);
+                Logger.log("Read request body of length " + contentLength + " bytes.", LogLevel.info);
             }
 
-            // Forward the request to the Rust Node and get the response
-            forwardRequestToRustNode(method, uri, requestHeaders, requestBody, rustNodeSocket, clientSocket);
+            // Forward the request to the Node and get the response
+            forwardRequestToRustNode(method, uri, requestHeaders, requestBody, nodeSocket, clientSocket);
 
             // Close the client connection
+            Logger.log("Closing connection with client.", LogLevel.info);
             clientSocket.close();
-            System.out.println("Closing connection with client.");
 
         } catch (SocketTimeoutException e) {
-            System.err.println("Connection timed out: " + e.getMessage());
+            Logger.log("Connection timed out: " + e.getMessage(), LogLevel.warn);
         } catch (SocketException e) {
-            System.err.println("Connection reset by peer: " + e.getMessage());
+            Logger.log("Connection reset by peer: " + e.getMessage(), LogLevel.warn);
         } catch (IOException e) {
+            Logger.log("An IOException occurred: " + e.getMessage(), LogLevel.error);
             e.printStackTrace();
         } finally {
             // Ensure the client socket is closed
             try {
                 clientSocket.close();
             } catch (IOException e) {
+                Logger.log("Failed to close client socket: " + e.getMessage(), LogLevel.error);
                 e.printStackTrace();
             }
         }
@@ -140,7 +152,11 @@ public class Main {
     private static int getContentLength(Map<String, String> headers) {
         int contentLength = 0;
         if (headers.containsKey("Content-Length")) {
-            contentLength = Integer.parseInt(headers.get("Content-Length"));
+            try {
+                contentLength = Integer.parseInt(headers.get("Content-Length"));
+            } catch (NumberFormatException e) {
+                Logger.log("Invalid Content-Length value: " + headers.get("Content-Length"), LogLevel.warn);
+            }
         }
         return contentLength;
     }
@@ -160,6 +176,7 @@ public class Main {
             int bytesRead = inputStream.read(requestBody, totalBytesRead, contentLength - totalBytesRead);
             if (bytesRead == -1) {
                 // Client closed the connection
+                Logger.log("Client closed the connection while reading the request body.", LogLevel.warn);
                 break;
             }
             totalBytesRead += bytesRead;
@@ -168,25 +185,25 @@ public class Main {
     }
 
     /**
-     * Forwards the request to the Rust Node and retrieves the response.
+     * Forwards the request to the Node and retrieves the response.
      *
-     * @param method        The HTTP method.
-     * @param uri           The request URI.
-     * @param headers       The request headers.
-     * @param requestBody   The request body.
-     * @param rustNodeSocket The Rust Node's socket connection.
-     * @return The response bytes from the Rust Node.
+     * @param method         The HTTP method.
+     * @param uri            The request URI.
+     * @param headers        The request headers.
+     * @param requestBody    The request body.
+     * @param nodeSocket The Node's socket connection.
+     * @param clientSocket   The client's socket connection.
      * @throws IOException If an I/O error occurs.
      */
     private static void forwardRequestToRustNode(String method, String uri,
                                                  Map<String, String> headers, byte[] requestBody,
-                                                 Socket rustNodeSocket, Socket clientSocket) throws IOException {
+                                                 Socket nodeSocket, Socket clientSocket) throws IOException {
         // Get streams
-        OutputStream rustOutputStream = rustNodeSocket.getOutputStream();
-        InputStream rustInputStream = rustNodeSocket.getInputStream();
+        OutputStream nodeOutputStream = nodeSocket.getOutputStream();
+        InputStream nodeInputStream = nodeSocket.getInputStream();
         OutputStream clientOutputStream = clientSocket.getOutputStream();
 
-        // Serialize and send the request to the Rust Node
+        // Serialize and send the request to the Node
         ByteArrayOutputStream requestStream = new ByteArrayOutputStream();
 
         // Write request line
@@ -204,29 +221,29 @@ public class Main {
         }
 
         // Send the length and the request
-        DataOutputStream rustDataOut = new DataOutputStream(rustOutputStream);
+        DataOutputStream nodeDataOut = new DataOutputStream(nodeOutputStream);
         byte[] requestBytes = requestStream.toByteArray();
-        rustDataOut.writeInt(requestBytes.length);
-        rustDataOut.write(requestBytes);
-        rustDataOut.flush();
+        nodeDataOut.writeInt(requestBytes.length);
+        nodeDataOut.write(requestBytes);
+        nodeDataOut.flush();
 
-        System.out.println("Sent!");
+        Logger.log("Request forwarded to Rust Node.", LogLevel.network);
 
-        // Read from rustInputStream and write to clientOutputStream
+        // Read from nodeInputStream and write to clientOutputStream
         byte[] buffer = new byte[8192];
         int bytesRead;
-        while ((bytesRead = rustInputStream.read(buffer)) != -1) {
+        while ((bytesRead = nodeInputStream.read(buffer)) != -1) {
             clientOutputStream.write(buffer, 0, bytesRead);
-            System.out.println("READ: " + new String(buffer, 0, bytesRead, StandardCharsets.UTF_8));
             clientOutputStream.flush();
+            // Optionally log the data received from Rust Node
+            // Be cautious with large responses
+            // Logger.log("Forwarded " + bytesRead + " bytes to client.", LogLevel.network);
         }
 
-        System.out.println("END");
-        // Close the client output stream after forwarding is complete
-//        clientOutputStream.close();
+        Logger.log("Finished forwarding response to client.", LogLevel.network);
+        // Do not close the client output stream; let the client handle it
+        // clientOutputStream.close();
     }
-
-
 
     /**
      * Reads a line from the input stream.

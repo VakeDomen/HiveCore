@@ -22,4 +22,9 @@ public class Logger {
                 default -> System.out.println(WHITE + msg);
             }
         }
+
+
+        public static void log(String msg) {
+            log(msg, LogLevel.info);
+        }
 }
