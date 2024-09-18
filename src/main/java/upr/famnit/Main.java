@@ -85,7 +85,7 @@ public class Main {
 
             // Read the request headers
             Map<String, String> requestHeaders = readRequestHeaders(clientInputStream);
-            Logger.log("Request Headers: " + requestHeaders.toString(), LogLevel.info);
+            Logger.log("Request Headers: " + requestHeaders, LogLevel.info);
             int contentLength = contentLength = Integer.parseInt(requestHeaders.get("Content-Length"));
 
             // Read the request body if present
@@ -170,53 +170,64 @@ public class Main {
      * @param uri            The request URI.
      * @param headers        The request headers.
      * @param requestBody    The request body.
-     * @param nodeSocket The Node's socket connection.
+     * @param nodeSocket     The Node's socket connection.
      * @param clientSocket   The client's socket connection.
-     * @throws IOException If an I/O error occurs.
+     * @throws IOException   If an I/O error occurs.
      */
     private static void proxyRequestToNode(String method, String uri,
                                                  Map<String, String> headers, byte[] requestBody,
                                                  Socket nodeSocket, Socket clientSocket) throws IOException {
-        // Get streams
-        OutputStream nodeOutputStream = nodeSocket.getOutputStream();
-        InputStream nodeInputStream = nodeSocket.getInputStream();
-        OutputStream clientOutputStream = clientSocket.getOutputStream();
+        OutputStream streamToClient = clientSocket.getOutputStream();
+        InputStream streamFromNode = nodeSocket.getInputStream();
+        DataOutputStream streamToNode = new DataOutputStream(nodeSocket.getOutputStream());
 
-        // Serialize and send the request to the Node
-        ByteArrayOutputStream requestStream = new ByteArrayOutputStream();
+        // write content length for the node to read
+        streamToNode.writeInt(getTotalLength(method, uri, headers, requestBody));
 
-        // Write request line
-        requestStream.write((method + " " + uri + " HTTP/1.1\r\n").getBytes(StandardCharsets.UTF_8));
-
-        // Write headers
+        // write the request to node (first send the length of request for the node to read in bytes)
+        streamToNode.write((method + " " + uri + " HTTP/1.1\r\n").getBytes(StandardCharsets.UTF_8));
         for (Map.Entry<String, String> entry : headers.entrySet()) {
-            requestStream.write((entry.getKey() + ": " + entry.getValue() + "\r\n").getBytes(StandardCharsets.UTF_8));
+            streamToNode.write((entry.getKey() + ": " + entry.getValue() + "\r\n").getBytes(StandardCharsets.UTF_8));
         }
-        requestStream.write("\r\n".getBytes(StandardCharsets.UTF_8)); // End of headers
-
-        // Write body if present
+        streamToNode.write("\r\n".getBytes(StandardCharsets.UTF_8));  // End of headers
         if (requestBody != null && requestBody.length > 0) {
-            requestStream.write(requestBody);
+            streamToNode.write(requestBody);
         }
-
-        // Send the length and the request
-        DataOutputStream nodeDataOut = new DataOutputStream(nodeOutputStream);
-        byte[] requestBytes = requestStream.toByteArray();
-        nodeDataOut.writeInt(requestBytes.length);
-        nodeDataOut.write(requestBytes);
-        nodeDataOut.flush();
-
+        streamToNode.flush();
         Logger.log("Request forwarded to Node.", LogLevel.network);
 
-        // Read from nodeInputStream and write to clientOutputStream
+        // read from node and stream back to client
         byte[] buffer = new byte[MESSAGE_CHUNK_BUFFER_SIZE];
         int bytesRead;
-        while ((bytesRead = nodeInputStream.read(buffer)) != -1) {
-            clientOutputStream.write(buffer, 0, bytesRead);
-            clientOutputStream.flush();
+        while ((bytesRead = streamFromNode.read(buffer)) != -1) {
+            streamToClient.write(buffer, 0, bytesRead);
+            streamToClient.flush();
         }
 
         Logger.log("Finished forwarding response to client.", LogLevel.network);
+    }
+
+    /**
+     * Calculates the byte size of the request that would be created with the civen data
+     *
+     * @param method        The HTTP method
+     * @param uri           The request URI
+     * @param headers       The request headers
+     * @param requestBody   The request body in bytes
+     * @return              The number of content-length bytes
+     */
+    private static int getTotalLength(String method, String uri, Map<String, String> headers, byte[] requestBody) {
+        // Calculate the total length of the request (headers + body)
+        int totalLength = (method + " " + uri + " HTTP/1.1\r\n").getBytes(StandardCharsets.UTF_8).length;
+        for (Map.Entry<String, String> entry : headers.entrySet()) {
+            totalLength += (entry.getKey() + ": " + entry.getValue() + "\r\n").getBytes(StandardCharsets.UTF_8).length;
+        }
+        totalLength += "\r\n".getBytes(StandardCharsets.UTF_8).length;  // End of headers
+
+        if (requestBody != null && requestBody.length > 0) {
+            totalLength += requestBody.length;  // Add the length of the request body
+        }
+        return totalLength;
     }
 
     /**
