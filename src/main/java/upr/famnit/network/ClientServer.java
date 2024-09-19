@@ -1,6 +1,7 @@
 package upr.famnit.network;
 
 import upr.famnit.managers.ClientRequestManager;
+import upr.famnit.managers.NodeConnectionManager;
 import upr.famnit.util.LogLevel;
 import upr.famnit.util.Logger;
 
@@ -32,7 +33,7 @@ public class ClientServer implements Runnable {
                 // Accept incoming client connection
                 Socket clientSocket = serverSocket.accept();
                 Logger.log("Client connected: " + clientSocket.getRemoteSocketAddress(), LogLevel.network);
-                Socket nodeHandler = nodeServer.getNode().getNodeSocket();
+                NodeConnectionManager nodeHandler = nodeServer.getNode();
                 ClientRequestManager crm = new ClientRequestManager(clientSocket, nodeHandler);
                 executorService.execute(crm);
             }
