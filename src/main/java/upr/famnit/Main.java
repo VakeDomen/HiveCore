@@ -236,14 +236,14 @@ public class Main {
                 responseHeaders.put(headerName.toLowerCase(), headerValue);
             }
         }
-        System.out.println("Recieved headers: " + responseHeaders);
+        Logger.log("Response headers: " + responseHeaders);
         writer.write("\r\n");
         writer.flush();
 
         // Determine how to read the response body
         if (responseHeaders.containsKey("transfer-encoding") && responseHeaders.get("transfer-encoding").equalsIgnoreCase("chunked")) {
             // Read chunked response
-            readAndForwardChunkedBody(reader, writer);
+            readAndForwardChunkedBody(streamFromNode, streamToClient);
         } else if (responseHeaders.containsKey("content-length")) {
             // Read fixed-length response
             int contentLength = Integer.parseInt(responseHeaders.get("content-length"));
@@ -254,58 +254,114 @@ public class Main {
         }
     }
 
-    private static void readAndForwardChunkedBody(BufferedReader reader, OutputStreamWriter writer) throws IOException {
+    private static void readAndForwardChunkedBody(InputStream in, OutputStream out) throws IOException {
         Logger.log("Receiving chunked response...", LogLevel.network);
-        String line;
-
-        while ((line = reader.readLine()) != null) {
-            Logger.log("RECV " + line, LogLevel.network);
-
-            // Write the chunk size as received
-            writer.write(line + "\r\n");
-            writer.flush();
+        while (true) {
+            // Read the chunk size line
+            String chunkSizeLine = readLine(in);
+            if (chunkSizeLine == null) {
+                throw new IOException("Unexpected end of stream while reading chunk size");
+            }
+            out.write(chunkSizeLine.getBytes(StandardCharsets.US_ASCII));
+            out.write("\r\n".getBytes(StandardCharsets.US_ASCII));
+            out.flush();
 
             int chunkSize;
             try {
-                chunkSize = Integer.parseInt(line.trim(), 16);
+                chunkSize = Integer.parseInt(chunkSizeLine.trim(), 16);
             } catch (NumberFormatException e) {
-                throw new IOException("Invalid chunk size: " + line);
+                throw new IOException("Invalid chunk size: " + chunkSizeLine);
             }
 
             if (chunkSize == 0) {
-                // End of chunked data
+                // End of chunks
                 Logger.log("End of chunked response.", LogLevel.network);
                 // Read and forward any trailing headers
-                while ((line = reader.readLine()) != null && !line.isEmpty()) {
+                String line;
+                while ((line = readLine(in)) != null && !line.isEmpty()) {
                     Logger.log("Trailing header: " + line, LogLevel.network);
-                    writer.write(line + "\r\n");
-                    writer.flush();
+                    out.write(line.getBytes(StandardCharsets.US_ASCII));
+                    out.write("\r\n".getBytes(StandardCharsets.US_ASCII));
                 }
-                writer.write("\r\n");
-                writer.flush();
+                out.write("\r\n".getBytes(StandardCharsets.US_ASCII));
+                out.flush();
                 break;
             }
 
             // Read the chunk data
-            char[] chunkData = new char[chunkSize];
+            byte[] chunkData = new byte[chunkSize];
             int totalBytesRead = 0;
             while (totalBytesRead < chunkSize) {
-                int bytesRead = reader.read(chunkData, totalBytesRead, chunkSize - totalBytesRead);
+                int bytesRead = in.read(chunkData, totalBytesRead, chunkSize - totalBytesRead);
                 if (bytesRead == -1) {
                     throw new IOException("Unexpected end of stream while reading chunk data");
                 }
                 totalBytesRead += bytesRead;
             }
 
-            // Read the trailing CRLF after the chunk data
-            reader.readLine();
+            // Write the chunk data to the output
+            out.write(chunkData);
+            out.write("\r\n".getBytes(StandardCharsets.US_ASCII));
+            out.flush();
 
-            // Write the chunk data
-            writer.write(chunkData);
-            writer.write("\r\n");
-            writer.flush();
+            // Read the trailing CRLF after the chunk data
+            String crlf = readLine(in);
+            if (crlf == null || !crlf.isEmpty()) {
+                throw new IOException("Expected CRLF after chunk data");
+            }
         }
     }
+//
+//    private static void readAndForwardChunkedBody(BufferedReader reader, OutputStreamWriter writer) throws IOException {
+//        Logger.log("Receiving chunked response...", LogLevel.network);
+//        String line;
+//
+//        while ((line = reader.readLine()) != null) {
+//            // Write the chunk size as received
+//            writer.write(line + "\r\n");
+//            writer.flush();
+//
+//            int chunkSize;
+//            try {
+//                chunkSize = Integer.parseInt(line.trim(), 16);
+//            } catch (NumberFormatException e) {
+//                throw new IOException("Invalid chunk size: " + line);
+//            }
+//
+//            if (chunkSize == 0) {
+//                // End of chunked data
+//                Logger.log("End of chunked response.", LogLevel.network);
+//                // Read and forward any trailing headers
+//                while ((line = reader.readLine()) != null && !line.isEmpty()) {
+//                    Logger.log("Trailing header: " + line, LogLevel.network);
+//                    writer.write(line + "\r\n");
+//                    writer.flush();
+//                }
+//                writer.write("\r\n");
+//                writer.flush();
+//                break;
+//            }
+//
+//            // Read the chunk data
+//            char[] chunkData = new char[chunkSize];
+//            int totalBytesRead = 0;
+//            while (totalBytesRead < chunkSize) {
+//                int bytesRead = reader.read(chunkData, totalBytesRead, chunkSize - totalBytesRead);
+//                if (bytesRead == -1) {
+//                    throw new IOException("Unexpected end of stream while reading chunk data");
+//                }
+//                totalBytesRead += bytesRead;
+//            }
+//
+//            // Read the trailing CRLF after the chunk data
+//            reader.readLine();
+//
+//            // Write the chunk data
+//            writer.write(chunkData);
+//            writer.write("\r\n");
+//            writer.flush();
+//        }
+//    }
 
 
     private static void readAndForwardFixedLengthBody(InputStream in, OutputStream out, int contentLength) throws IOException {
