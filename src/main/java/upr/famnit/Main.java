@@ -10,6 +10,7 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -67,12 +68,11 @@ public class Main {
             // Set a timeout for the client socket
             clientSocket.setSoTimeout(PROXY_TIMEOUT_MS);  // 30 seconds timeout
 
-            InputStream clientInputStream = clientSocket.getInputStream();
-
             // Read the client's request line
+            InputStream clientInputStream = clientSocket.getInputStream();
             String requestLine = readLine(clientInputStream);
             if (requestLine == null || requestLine.isEmpty()) {
-                Logger.log("Received empty request from client. Closing connection.", LogLevel.warn);
+                Logger.log("Received empty request from client. Closing connection.", LogLevel.error);
                 clientSocket.close();
                 return;
             }
@@ -86,7 +86,7 @@ public class Main {
             // Read the request headers
             Map<String, String> requestHeaders = readRequestHeaders(clientInputStream);
             Logger.log("Request Headers: " + requestHeaders, LogLevel.info);
-            int contentLength = contentLength = Integer.parseInt(requestHeaders.get("Content-Length"));
+            int contentLength = Integer.parseInt(requestHeaders.get("Content-Length"));
 
             // Read the request body if present
             byte[] requestBody = null;
@@ -99,7 +99,7 @@ public class Main {
             proxyRequestToNode(method, uri, requestHeaders, requestBody, nodeSocket, clientSocket);
 
             // Close the client connection
-            Logger.log("Closing connection with client.", LogLevel.info);
+            Logger.log("Request successfully proxied. Closing connection with client.", LogLevel.info);
             clientSocket.close();
 
         } catch (SocketTimeoutException e) {
@@ -175,36 +175,159 @@ public class Main {
      * @throws IOException   If an I/O error occurs.
      */
     private static void proxyRequestToNode(String method, String uri,
-                                                 Map<String, String> headers, byte[] requestBody,
-                                                 Socket nodeSocket, Socket clientSocket) throws IOException {
-        OutputStream streamToClient = clientSocket.getOutputStream();
+                                           Map<String, String> headers, byte[] requestBody,
+                                           Socket nodeSocket, Socket clientSocket) throws IOException {
         InputStream streamFromNode = nodeSocket.getInputStream();
-        DataOutputStream streamToNode = new DataOutputStream(nodeSocket.getOutputStream());
+        OutputStream streamToNode = nodeSocket.getOutputStream();
+        InputStream streamFromClient = clientSocket.getInputStream();
+        OutputStream streamToClient = clientSocket.getOutputStream();
+        DataOutputStream dataToNode = new DataOutputStream(streamToNode);
 
-        // write content length for the node to read
-        streamToNode.writeInt(getTotalLength(method, uri, headers, requestBody));
+        // Write content length for the node to read
+        dataToNode.writeInt(getTotalLength(method, uri, headers, requestBody));
 
-        // write the request to node (first send the length of request for the node to read in bytes)
-        streamToNode.write((method + " " + uri + " HTTP/1.1\r\n").getBytes(StandardCharsets.UTF_8));
+        // Write the request to node
+        dataToNode.write((method + " " + uri + " HTTP/1.1\r\n").getBytes(StandardCharsets.UTF_8));
         for (Map.Entry<String, String> entry : headers.entrySet()) {
-            streamToNode.write((entry.getKey() + ": " + entry.getValue() + "\r\n").getBytes(StandardCharsets.UTF_8));
+            dataToNode.write((entry.getKey() + ": " + entry.getValue() + "\r\n").getBytes(StandardCharsets.UTF_8));
         }
-        streamToNode.write("\r\n".getBytes(StandardCharsets.UTF_8));  // End of headers
+        dataToNode.write("\r\n".getBytes(StandardCharsets.UTF_8));  // End of headers
         if (requestBody != null && requestBody.length > 0) {
-            streamToNode.write(requestBody);
+            dataToNode.write(requestBody);
         }
-        streamToNode.flush();
+        dataToNode.flush();
         Logger.log("Request forwarded to Node.", LogLevel.network);
 
-        // read from node and stream back to client
-        byte[] buffer = new byte[MESSAGE_CHUNK_BUFFER_SIZE];
-        int bytesRead;
-        while ((bytesRead = streamFromNode.read(buffer)) != -1) {
-            streamToClient.write(buffer, 0, bytesRead);
-            streamToClient.flush();
-        }
+        // Read from node and stream back to client
+//        byte[] buffer = new byte[8192];  // Adjust buffer size as needed
+//        int bytesRead;
+//        while ((bytesRead = streamFromNode.read(buffer)) != -1) {
+//            streamToClient.write(buffer, 0, bytesRead);
+//            streamToClient.flush();
+//        }
+
+        readAndForwardResponse(streamFromNode, streamToClient);
 
         Logger.log("Finished forwarding response to client.", LogLevel.network);
+    }
+
+
+    private static void readAndForwardResponse(InputStream streamFromNode, OutputStream streamToClient) throws IOException {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(streamFromNode, StandardCharsets.UTF_8));
+        OutputStreamWriter writer = new OutputStreamWriter(streamToClient, StandardCharsets.UTF_8);
+
+        // Read and forward the status line
+        String statusLine = reader.readLine();
+        if (statusLine == null) {
+            throw new IOException("Failed to read status line from node");
+        }
+        writer.write(statusLine + "\r\n");
+        Logger.log("Status Line: " + statusLine, LogLevel.info);
+
+        // Read and forward headers
+        Map<String, String> responseHeaders = new HashMap<>();
+        String headerLine;
+        while ((headerLine = reader.readLine()) != null && !headerLine.isEmpty()) {
+            writer.write(headerLine + "\r\n");
+            int separatorIndex = headerLine.indexOf(":");
+            if (separatorIndex != -1) {
+                String headerName = headerLine.substring(0, separatorIndex).trim();
+                String headerValue = headerLine.substring(separatorIndex + 1).trim();
+                responseHeaders.put(headerName.toLowerCase(), headerValue);
+            }
+        }
+        System.out.println("Recieved headers: " + responseHeaders);
+        writer.write("\r\n");
+        writer.flush();
+
+        // Determine how to read the response body
+        if (responseHeaders.containsKey("transfer-encoding") && responseHeaders.get("transfer-encoding").equalsIgnoreCase("chunked")) {
+            // Read chunked response
+            readAndForwardChunkedBody(reader, writer);
+        } else if (responseHeaders.containsKey("content-length")) {
+            // Read fixed-length response
+            int contentLength = Integer.parseInt(responseHeaders.get("content-length"));
+            readAndForwardFixedLengthBody(streamFromNode, streamToClient, contentLength);
+        } else {
+            // No Content-Length or Transfer-Encoding; read until EOF (use with caution)
+            readAndForwardUntilEOF(streamFromNode, streamToClient);
+        }
+    }
+
+    private static void readAndForwardChunkedBody(BufferedReader reader, OutputStreamWriter writer) throws IOException {
+        Logger.log("Receiving chunked response...", LogLevel.network);
+        String line;
+
+        while ((line = reader.readLine()) != null) {
+            Logger.log("RECV " + line, LogLevel.network);
+
+            // Write the chunk size as received
+            writer.write(line + "\r\n");
+            writer.flush();
+
+            int chunkSize;
+            try {
+                chunkSize = Integer.parseInt(line.trim(), 16);
+            } catch (NumberFormatException e) {
+                throw new IOException("Invalid chunk size: " + line);
+            }
+
+            if (chunkSize == 0) {
+                // End of chunked data
+                Logger.log("End of chunked response.", LogLevel.network);
+                // Read and forward any trailing headers
+                while ((line = reader.readLine()) != null && !line.isEmpty()) {
+                    Logger.log("Trailing header: " + line, LogLevel.network);
+                    writer.write(line + "\r\n");
+                    writer.flush();
+                }
+                writer.write("\r\n");
+                writer.flush();
+                break;
+            }
+
+            // Read the chunk data
+            char[] chunkData = new char[chunkSize];
+            int totalBytesRead = 0;
+            while (totalBytesRead < chunkSize) {
+                int bytesRead = reader.read(chunkData, totalBytesRead, chunkSize - totalBytesRead);
+                if (bytesRead == -1) {
+                    throw new IOException("Unexpected end of stream while reading chunk data");
+                }
+                totalBytesRead += bytesRead;
+            }
+
+            // Read the trailing CRLF after the chunk data
+            reader.readLine();
+
+            // Write the chunk data
+            writer.write(chunkData);
+            writer.write("\r\n");
+            writer.flush();
+        }
+    }
+
+
+    private static void readAndForwardFixedLengthBody(InputStream in, OutputStream out, int contentLength) throws IOException {
+        Logger.log("Receiving fixed length response...", LogLevel.network);
+        byte[] buffer = new byte[8192];
+        int totalBytesRead = 0;
+        int bytesRead;
+        while (totalBytesRead < contentLength && (bytesRead = in.read(buffer, 0, Math.min(buffer.length, contentLength - totalBytesRead))) != -1) {
+            out.write(buffer, 0, bytesRead);
+            out.flush();
+            totalBytesRead += bytesRead;
+        }
+    }
+
+    private static void readAndForwardUntilEOF(InputStream in, OutputStream out) throws IOException {
+        Logger.log("Receiving unknown length response...", LogLevel.network);
+        byte[] buffer = new byte[8192];
+        int bytesRead;
+        while ((bytesRead = in.read(buffer)) != -1) {
+            out.write(buffer, 0, bytesRead);
+            out.flush();
+        }
     }
 
     /**
