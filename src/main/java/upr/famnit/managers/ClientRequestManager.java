@@ -33,6 +33,7 @@ public class ClientRequestManager implements Runnable {
     @Override
     public void run() {
         try {
+            Logger.log("Handling client");
             // Set a timeout for the client socket
             clientSocket.setSoTimeout(PROXY_TIMEOUT_MS);  // 30 seconds timeout
 
