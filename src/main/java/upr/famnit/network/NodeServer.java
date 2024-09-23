@@ -1,28 +1,17 @@
 package upr.famnit.network;
 
 import upr.famnit.managers.NodeConnectionManager;
-import upr.famnit.util.LogLevel;
 import upr.famnit.util.Logger;
-
-import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.ServerSocket;
-import java.net.Socket;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Map;
 
 import static upr.famnit.util.Config.NODE_CONNECTION_PORT;
 
 public class NodeServer implements Runnable {
     private final ServerSocket serverSocket;
-
     private final Object nodesLock = new Object();
     private final ArrayList<NodeConnectionManager> nodes;
-
-
 
 
     public NodeServer() throws IOException {
