@@ -1,5 +1,6 @@
 package upr.famnit.managers;
 
+import upr.famnit.components.Request;
 import upr.famnit.util.LogLevel;
 import upr.famnit.util.Logger;
 import upr.famnit.util.StreamUtil;
@@ -36,35 +37,18 @@ public class ClientRequestManager implements Runnable {
             // Set a timeout for the client socket
             clientSocket.setSoTimeout(PROXY_TIMEOUT_MS);  // 30 seconds timeout
 
-            // Read the client's request line
             InputStream clientInputStream = clientSocket.getInputStream();
-            String requestLine = StreamUtil.readLine(clientInputStream);
-            if (requestLine == null || requestLine.isEmpty()) {
-                Logger.log("Received empty request from client. Closing connection.", LogLevel.error);
-                clientSocket.close();
+            Request request;
+            try {
+                request = new Request(clientInputStream);
+            } catch (IOException e) {
+                Logger.log(e.getMessage(), LogLevel.error);
+                Logger.log("Closing connection to client.", LogLevel.error);
+                clientInputStream.close();
                 return;
             }
 
-            // Parse the request line
-            String[] requestParts = requestLine.split(" ");
-            String method = requestParts[0];
-            String uri = requestParts[1];
-            Logger.log("Request Line: " + requestLine, LogLevel.info);
-
-            // Read the request headers
-            Map<String, String> requestHeaders = StreamUtil.readHeaders(clientInputStream);
-            Logger.log("Request Headers: " + requestHeaders, LogLevel.info);
-            int contentLength = Integer.parseInt(requestHeaders.get("Content-Length"));
-
-            // Read the request body if present
-            byte[] requestBody = null;
-            if (("POST".equalsIgnoreCase(method) || "PUT".equalsIgnoreCase(method)) && contentLength > 0) {
-                requestBody = StreamUtil.readRequestBody(clientInputStream, contentLength);
-                Logger.log("Read request body of length " + contentLength + " bytes.", LogLevel.info);
-            }
-
-
-            nodeSocket.proxyRequestToNode(method, uri, requestHeaders, requestBody, clientSocket);
+            nodeSocket.proxyRequestToNode(request, clientSocket);
             Logger.log("Request successfully proxied. Closing connection with client.", LogLevel.info);
             clientSocket.close();
 

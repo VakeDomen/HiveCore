@@ -1,5 +1,6 @@
 package upr.famnit.managers;
 
+import upr.famnit.components.Request;
 import upr.famnit.util.LogLevel;
 import upr.famnit.util.Logger;
 import upr.famnit.util.StreamUtil;
@@ -24,6 +25,10 @@ public class NodeConnectionManager {
         System.out.println("Waiting for worker node to connect...");
         nodeSocket = nodeServerSocket.accept();
         System.out.println("Worker node connected: " + nodeSocket.getInetAddress());
+    }
+
+    public synchronized void proxyRequestToNode(Request request, Socket clientSocket) throws IOException {
+        proxyRequestToNode(request.getMethod(), request.getUri(), request.getHeaders(), request.getBody(), clientSocket);
     }
 
     public synchronized void proxyRequestToNode(String method, String uri,
