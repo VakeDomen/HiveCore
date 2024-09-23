@@ -1,7 +1,6 @@
 package upr.famnit.managers;
 
-import upr.famnit.components.Request;
-import upr.famnit.util.LogLevel;
+import upr.famnit.components.*;
 import upr.famnit.util.Logger;
 import upr.famnit.util.StreamUtil;
 
@@ -14,24 +13,49 @@ import java.util.Map;
 /**
  * Handles the connection from the Node.
  */
-public class NodeConnectionManager {
+public class NodeConnectionManager extends Thread {
 
     private Socket nodeSocket;
+    private boolean connectionOpen;
 
-    /**
-     * Accepts a connection from the Node.
-     */
-    public void acceptConnection(ServerSocket nodeServerSocket) throws IOException {
+    public NodeConnectionManager(ServerSocket nodeServerSocket) throws IOException {
         System.out.println("Waiting for worker node to connect...");
         nodeSocket = nodeServerSocket.accept();
+        connectionOpen = true;
         System.out.println("Worker node connected: " + nodeSocket.getInetAddress());
     }
 
-    public synchronized void proxyRequestToNode(Request request, Socket clientSocket) throws IOException {
-        proxyRequestToNode(request.getMethod(), request.getUri(), request.getHeaders(), request.getBody(), clientSocket);
+    @Override
+    public void run() {
+        while (connectionOpen) {
+            try {
+                Request request = new Request(nodeSocket.getInputStream());
+                ClientRequest clientRequest = RequestQue.getTask("mistral-nemo");
+                if (clientRequest == null) {
+                    Request emptyQueResponse = Request.EmptyQueResponse();
+                    StreamUtil.sendRequest(nodeSocket.getOutputStream(), emptyQueResponse);
+                    continue;
+                }
+                proxyRequestToNode(clientRequest);
+
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 
-    public synchronized void proxyRequestToNode(String method, String uri,
+    public synchronized void proxyRequestToNode(ClientRequest clientRequest) throws IOException {
+        proxyRequestToNode(
+                clientRequest.getRequest().getProtocol(),
+                clientRequest.getRequest().getMethod(),
+                clientRequest.getRequest().getUri(),
+                clientRequest.getRequest().getHeaders(),
+                clientRequest.getRequest().getBody(),
+                clientRequest.getClientSocket()
+        );
+    }
+
+    public synchronized void proxyRequestToNode(String protocol, String method, String uri,
                                                 Map<String, String> headers, byte[] requestBody,
                                                 Socket clientSocket) throws IOException {
         InputStream streamFromNode = nodeSocket.getInputStream();
@@ -40,10 +64,10 @@ public class NodeConnectionManager {
         DataOutputStream dataToNode = new DataOutputStream(streamToNode);
 
         // Write content length for the node to read
-        dataToNode.writeInt(StreamUtil.getTotalLength(method, uri, headers, requestBody));
+        dataToNode.writeInt(StreamUtil.getTotalLength(protocol, method, uri, headers, requestBody));
 
         // Write the request to node
-        dataToNode.write((method + " " + uri + " HTTP/1.1\r\n").getBytes(StandardCharsets.UTF_8));
+        dataToNode.write((method + " " + uri + " " + protocol + "\r\n").getBytes(StandardCharsets.UTF_8));
         for (Map.Entry<String, String> entry : headers.entrySet()) {
             dataToNode.write((entry.getKey() + ": " + entry.getValue() + "\r\n").getBytes(StandardCharsets.UTF_8));
         }

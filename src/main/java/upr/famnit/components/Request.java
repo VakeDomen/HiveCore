@@ -1,20 +1,36 @@
 package upr.famnit.components;
 
-import upr.famnit.util.LogLevel;
 import upr.famnit.util.Logger;
 import upr.famnit.util.StreamUtil;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class Request {
+
+    private String protocol;
     private String method;
     private String uri;
     private Map<String, String> headers;
     private byte[] body;
 
-    public Request(String method, String uri, Map<String, String> headers, byte[] body) {
+
+
+    public static Request EmptyQueResponse() {
+        return new Request(
+            "HIVE",
+            "POLL",
+            "/",
+            null,
+            null
+        );
+    }
+
+    public Request(String protocol, String method, String uri, Map<String, String> headers, byte[] body) {
+        this.protocol = protocol;
         this.method = method;
         this.uri = uri;
         this.headers = headers;
@@ -23,6 +39,7 @@ public class Request {
 
     public Request(InputStream clientInputStream) throws IOException {
         // Read the client's request line
+        System.out.println("Waiting for message from worker");
         String requestLine = StreamUtil.readLine(clientInputStream);
         if (requestLine == null || requestLine.isEmpty()) {
             throw new IOException("Received empty request from client. ");
@@ -32,7 +49,13 @@ public class Request {
         String[] requestParts = requestLine.split(" ");
         this.method = requestParts[0];
         this.uri = requestParts[1];
+        this.protocol = requestParts[2];
         Logger.log("Request Line: " + requestLine, LogLevel.info);
+        if (protocol.equals("HIVE")) {
+            headers = new LinkedHashMap<>();
+            protocol = "HIVE";
+            return;
+        }
 
         // Read the request headers
         this.headers = StreamUtil.readHeaders(clientInputStream);
@@ -47,35 +70,24 @@ public class Request {
         }
     }
 
-    public String getMethod() {
-        return method;
+    public String getProtocol() {
+        return protocol;
     }
 
-    public void setMethod(String method) {
-        this.method = method;
+    public String getMethod() {
+        return method;
     }
 
     public String getUri() {
         return uri;
     }
 
-    public void setUri(String uri) {
-        this.uri = uri;
-    }
-
     public Map<String, String> getHeaders() {
         return headers;
-    }
-
-    public void setHeaders(Map<String, String> headers) {
-        this.headers = headers;
     }
 
     public byte[] getBody() {
         return body;
     }
 
-    public void setBody(byte[] body) {
-        this.body = body;
-    }
 }

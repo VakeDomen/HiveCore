@@ -1,11 +1,9 @@
 package upr.famnit;
 
-import upr.famnit.managers.ClientRequestManager;
-import upr.famnit.managers.NodeConnectionManager;
+import upr.famnit.components.LogLevel;
 import upr.famnit.network.ClientServer;
 import upr.famnit.network.NodeServer;
 import upr.famnit.util.Logger;
-import upr.famnit.util.LogLevel;
 
 import java.io.*;
 import java.util.concurrent.ExecutorService;

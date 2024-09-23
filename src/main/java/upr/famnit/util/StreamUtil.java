@@ -1,9 +1,9 @@
 package upr.famnit.util;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import upr.famnit.components.LogLevel;
+import upr.famnit.components.Request;
+
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -19,8 +19,13 @@ public class StreamUtil {
      * @param requestBody   The request body in bytes
      * @return              The number of content-length bytes
      */
-    public static int getTotalLength(String method, String uri, Map<String, String> headers, byte[] requestBody) {
-        int totalLength = (method + " " + uri + " HTTP/1.1\r\n").getBytes(StandardCharsets.UTF_8).length;
+    public static int getTotalLength(String protocol, String method, String uri, Map<String, String> headers, byte[] requestBody) {
+        int totalLength = (method + " " + uri + " " + protocol + "\r\n").getBytes(StandardCharsets.UTF_8).length;
+
+        if (protocol.equals("HIVE")) {
+            return totalLength;
+        }
+
         for (Map.Entry<String, String> entry : headers.entrySet()) {
             totalLength += (entry.getKey() + ": " + entry.getValue() + "\r\n").getBytes(StandardCharsets.UTF_8).length;
         }
@@ -30,6 +35,47 @@ public class StreamUtil {
             totalLength += requestBody.length;  // Add the length of the request body
         }
         return totalLength;
+    }
+
+    /**
+     * Sends an HTTP request through the given output stream.
+     *
+     * @param out     The output stream to send the request to.
+     * @param request The request object containing the HTTP request details.
+     * @throws IOException If an I/O error occurs.
+     */
+    public static void sendRequest(OutputStream out, Request request) throws IOException {
+        DataOutputStream dataToNode = new DataOutputStream(out);
+        // Write content length for the node to read
+        dataToNode.writeInt(StreamUtil.getTotalLength(
+                request.getProtocol(),
+                request.getMethod(),
+                request.getUri(),
+                request.getHeaders(),
+                request.getBody()
+        ));
+
+        // Write the request to node
+        dataToNode.write((request.getMethod() + " " + request.getUri() + " " + request.getProtocol() + "\r\n").getBytes(StandardCharsets.UTF_8));
+
+        if (request.getProtocol().equals("HIVE")) {
+            out.flush();
+            return;
+        }
+
+        for (Map.Entry<String, String> entry : request.getHeaders().entrySet()) {
+            dataToNode.write((entry.getKey() + ": " + entry.getValue() + "\r\n").getBytes(StandardCharsets.UTF_8));
+        }
+
+        dataToNode.write("\r\n".getBytes(StandardCharsets.UTF_8));  // End of headers
+        if (request.getBody() != null && request.getBody().length > 0) {
+            dataToNode.write(request.getBody());
+        }
+        dataToNode.flush();
+        Logger.log("Request forwarded to Node.", LogLevel.network);
+
+        // Flush the output stream to ensure all data is sent
+        out.flush();
     }
 
     /**
@@ -234,5 +280,82 @@ public class StreamUtil {
             return null;
         }
         return buffer.toString(StandardCharsets.US_ASCII);
+    }
+
+    /**
+     * Extracts the value associated with the specified key from a JSON-formatted byte array.
+     *
+     * @param key  The key whose associated value is to be returned.
+     * @param body The JSON-formatted byte array.
+     * @return The value associated with the key, or null if not found or parsing fails.
+     */
+    public static String getValueFromJSONBody(String key, byte[] body) {
+        if (body == null || body.length == 0 || key == null || key.isEmpty()) {
+            return null;
+        }
+
+        String jsonString = new String(body, StandardCharsets.UTF_8).trim();
+
+        // Prepare possible key representations with single and double quotes
+        String[] keyVariants = {
+                "\"" + key + "\"",
+                "'" + key + "'"
+        };
+
+        int keyIndex = -1;
+        String matchedKey = null;
+
+        // Find the key in the JSON string
+        for (String keyVariant : keyVariants) {
+            keyIndex = jsonString.indexOf(keyVariant);
+            if (keyIndex != -1) {
+                matchedKey = keyVariant;
+                break;
+            }
+        }
+
+        if (keyIndex == -1) {
+            return null; // Key not found
+        }
+
+        // Find the colon after the key
+        int colonIndex = jsonString.indexOf(':', keyIndex + matchedKey.length());
+        if (colonIndex == -1) {
+            return null; // Colon not found after key
+        }
+
+        // Skip whitespace after the colon
+        int valueStart = colonIndex + 1;
+        while (valueStart < jsonString.length() && Character.isWhitespace(jsonString.charAt(valueStart))) {
+            valueStart++;
+        }
+
+        if (valueStart >= jsonString.length()) {
+            return null; // No value found
+        }
+
+        // Check if the value starts with a quote
+        char quoteChar = jsonString.charAt(valueStart);
+        boolean isQuoted = quoteChar == '"' || quoteChar == '\'';
+
+        if (isQuoted) {
+            valueStart++; // Move past the opening quote
+            int valueEnd = jsonString.indexOf(quoteChar, valueStart);
+            if (valueEnd == -1) {
+                return null; // Closing quote not found
+            }
+            return jsonString.substring(valueStart, valueEnd);
+        } else {
+            // Value is unquoted; read until next comma or closing brace
+            int valueEnd = valueStart;
+            while (valueEnd < jsonString.length()) {
+                char c = jsonString.charAt(valueEnd);
+                if (c == ',' || c == '}') {
+                    break;
+                }
+                valueEnd++;
+            }
+            return jsonString.substring(valueStart, valueEnd).trim();
+        }
     }
 }

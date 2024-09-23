@@ -23,13 +23,11 @@ public class NodeServer implements Runnable {
     public void run() {
         try {
             Logger.log("Proxy server is running on port " + NODE_CONNECTION_PORT + "...");
-
             while (true) {
-                NodeConnectionManager nodeConnection = new NodeConnectionManager();
-                nodeConnection.acceptConnection(serverSocket);
+                NodeConnectionManager nodeConnection = new NodeConnectionManager(serverSocket);
+                nodeConnection.start();
                 addNode(nodeConnection);
             }
-
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

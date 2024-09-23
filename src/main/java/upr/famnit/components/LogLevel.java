@@ -1,4 +1,4 @@
-package upr.famnit.util;
+package upr.famnit.components;
 
 public enum LogLevel {
     warn,

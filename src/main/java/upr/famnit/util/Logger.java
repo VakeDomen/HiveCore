@@ -1,6 +1,8 @@
 package upr.famnit.util;
 
 
+import upr.famnit.components.LogLevel;
+
 public class Logger {
 
         public static final String RESET = "\u001B[0m";
