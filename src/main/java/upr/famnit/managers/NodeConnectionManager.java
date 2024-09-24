@@ -15,7 +15,7 @@ import java.util.Map;
  */
 public class NodeConnectionManager extends Thread {
 
-    private Socket nodeSocket;
+    private final Socket nodeSocket;
     private boolean connectionOpen;
 
     public NodeConnectionManager(ServerSocket nodeServerSocket) throws IOException {
@@ -32,7 +32,7 @@ public class NodeConnectionManager extends Thread {
                 Request request = new Request(nodeSocket.getInputStream());
                 ClientRequest clientRequest = RequestQue.getTask("mistral-nemo");
                 if (clientRequest == null) {
-                    Request emptyQueResponse = Request.EmptyQueResponse();
+                    Request emptyQueResponse = RequestFactory.EmptyQueResponse();
                     StreamUtil.sendRequest(nodeSocket.getOutputStream(), emptyQueResponse);
                     continue;
                 }
@@ -45,40 +45,13 @@ public class NodeConnectionManager extends Thread {
     }
 
     public synchronized void proxyRequestToNode(ClientRequest clientRequest) throws IOException {
-        proxyRequestToNode(
-                clientRequest.getRequest().getProtocol(),
-                clientRequest.getRequest().getMethod(),
-                clientRequest.getRequest().getUri(),
-                clientRequest.getRequest().getHeaders(),
-                clientRequest.getRequest().getBody(),
-                clientRequest.getClientSocket()
-        );
-    }
-
-    public synchronized void proxyRequestToNode(String protocol, String method, String uri,
-                                                Map<String, String> headers, byte[] requestBody,
-                                                Socket clientSocket) throws IOException {
         InputStream streamFromNode = nodeSocket.getInputStream();
         OutputStream streamToNode = nodeSocket.getOutputStream();
-        OutputStream streamToClient = clientSocket.getOutputStream();
-        DataOutputStream dataToNode = new DataOutputStream(streamToNode);
+        OutputStream streamToClient = clientRequest.getClientSocket().getOutputStream();
 
-        // Write content length for the node to read
-        dataToNode.writeInt(StreamUtil.getTotalLength(protocol, method, uri, headers, requestBody));
-
-        // Write the request to node
-        dataToNode.write((method + " " + uri + " " + protocol + "\r\n").getBytes(StandardCharsets.UTF_8));
-        for (Map.Entry<String, String> entry : headers.entrySet()) {
-            dataToNode.write((entry.getKey() + ": " + entry.getValue() + "\r\n").getBytes(StandardCharsets.UTF_8));
-        }
-        dataToNode.write("\r\n".getBytes(StandardCharsets.UTF_8));  // End of headers
-        if (requestBody != null && requestBody.length > 0) {
-            dataToNode.write(requestBody);
-        }
-        dataToNode.flush();
+        StreamUtil.sendRequest(streamToNode, clientRequest.getRequest());
         Logger.log("Request forwarded to Node.", LogLevel.network);
 
-        // readAndForwardResponse(streamFromNode, streamToClient);
         // Read the status line
         String statusLine = StreamUtil.readLine(streamFromNode);
         if (statusLine == null || statusLine.isEmpty()) {
@@ -111,5 +84,11 @@ public class NodeConnectionManager extends Thread {
         }
 
         Logger.log("Finished forwarding response to client.", LogLevel.network);
+    }
+
+    public synchronized void proxyRequestToNode(String protocol, String method, String uri,
+                                                Map<String, String> headers, byte[] requestBody,
+                                                Socket clientSocket) throws IOException {
+
     }
 }

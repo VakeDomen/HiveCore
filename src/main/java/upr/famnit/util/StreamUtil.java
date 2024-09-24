@@ -2,8 +2,10 @@ package upr.famnit.util;
 
 import upr.famnit.components.LogLevel;
 import upr.famnit.components.Request;
+import upr.famnit.components.Response;
 
 import java.io.*;
+import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -38,6 +40,61 @@ public class StreamUtil {
     }
 
     /**
+     * Calculates the byte size of the request that would be created with the given data
+     *
+     * @param protocol      The HTTP protocol
+     * @param code          The response code
+     * @param text          The response text
+     * @param headers       The response headers
+     * @return              The number of content-length bytes
+     */
+    public static int getTotalLength(String protocol, int code, String text, Map<String, String> headers) {
+        int totalLength = (protocol + " " + code + " " + text + "\r\n").getBytes(StandardCharsets.UTF_8).length;
+        if (protocol.equals("HIVE")) {
+            return totalLength;
+        }
+
+        if (headers != null && !headers.isEmpty()) {
+            for (Map.Entry<String, String> entry : headers.entrySet()) {
+                totalLength += (entry.getKey() + ": " + entry.getValue() + "\r\n").getBytes(StandardCharsets.UTF_8).length;
+            }
+        }
+
+        totalLength += "\r\n".getBytes(StandardCharsets.UTF_8).length;  // End of headers
+        return totalLength;
+    }
+
+
+    /**
+     * Sends an HTTP response through the given output stream.
+     *
+     * @param out     The output stream to send the request to.
+     * @param response The request object containing the HTTP request details.
+     * @throws IOException If an I/O error occurs.
+     */
+    public static void sendResponse(OutputStream out, Response response) throws IOException {
+        DataOutputStream outStream = new DataOutputStream(out);
+
+        // Write the request to node
+        outStream.write((response.getProtocol() + " " + response.getCode() + " " + response.getText() + "\r\n").getBytes(StandardCharsets.UTF_8));
+
+        if (response.getProtocol().equals("HIVE")) {
+            outStream.flush();
+            return;
+        }
+
+        if (response.getHeaders() != null && response.getHeaders().isEmpty()) {
+            for (Map.Entry<String, String> entry : response.getHeaders().entrySet()) {
+                outStream.write((entry.getKey() + ": " + entry.getValue() + "\r\n").getBytes(StandardCharsets.UTF_8));
+            }
+        }
+
+        outStream.write("\r\n".getBytes(StandardCharsets.UTF_8));
+        outStream.flush();
+    }
+
+
+    /**
      * Sends an HTTP request through the given output stream.
      *
      * @param out     The output stream to send the request to.
@@ -45,9 +102,9 @@ public class StreamUtil {
      * @throws IOException If an I/O error occurs.
      */
     public static void sendRequest(OutputStream out, Request request) throws IOException {
-        DataOutputStream dataToNode = new DataOutputStream(out);
+        DataOutputStream outStream = new DataOutputStream(out);
         // Write content length for the node to read
-        dataToNode.writeInt(StreamUtil.getTotalLength(
+        outStream.writeInt(StreamUtil.getTotalLength(
                 request.getProtocol(),
                 request.getMethod(),
                 request.getUri(),
@@ -56,26 +113,22 @@ public class StreamUtil {
         ));
 
         // Write the request to node
-        dataToNode.write((request.getMethod() + " " + request.getUri() + " " + request.getProtocol() + "\r\n").getBytes(StandardCharsets.UTF_8));
+        outStream.write((request.getMethod() + " " + request.getUri() + " " + request.getProtocol() + "\r\n").getBytes(StandardCharsets.UTF_8));
 
         if (request.getProtocol().equals("HIVE")) {
-            out.flush();
+            outStream.flush();
             return;
         }
 
         for (Map.Entry<String, String> entry : request.getHeaders().entrySet()) {
-            dataToNode.write((entry.getKey() + ": " + entry.getValue() + "\r\n").getBytes(StandardCharsets.UTF_8));
+            outStream.write((entry.getKey() + ": " + entry.getValue() + "\r\n").getBytes(StandardCharsets.UTF_8));
         }
 
-        dataToNode.write("\r\n".getBytes(StandardCharsets.UTF_8));  // End of headers
+        outStream.write("\r\n".getBytes(StandardCharsets.UTF_8));  // End of headers
         if (request.getBody() != null && request.getBody().length > 0) {
-            dataToNode.write(request.getBody());
+            outStream.write(request.getBody());
         }
-        dataToNode.flush();
-        Logger.log("Request forwarded to Node.", LogLevel.network);
-
-        // Flush the output stream to ensure all data is sent
-        out.flush();
+        outStream.flush();
     }
 
     /**
@@ -358,4 +411,6 @@ public class StreamUtil {
             return jsonString.substring(valueStart, valueEnd).trim();
         }
     }
+
+
 }

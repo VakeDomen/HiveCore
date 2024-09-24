@@ -1,9 +1,8 @@
 package upr.famnit.network;
 
-import upr.famnit.components.ClientRequest;
-import upr.famnit.components.LogLevel;
-import upr.famnit.components.RequestQue;
+import upr.famnit.components.*;
 import upr.famnit.util.Logger;
+import upr.famnit.util.StreamUtil;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -27,7 +26,13 @@ public class ClientServer implements Runnable {
                 Socket clientSocket = serverSocket.accept();
                 Logger.log("Client connected: " + clientSocket.getRemoteSocketAddress(), LogLevel.network);
                 ClientRequest cr = new ClientRequest(clientSocket);
-                RequestQue.addTask(cr);
+                if (!RequestQue.addTask(cr)) {
+                    Response failedResponse = ResponseFactory.MethodNotAllowed();
+                    StreamUtil.sendResponse(cr.getClientSocket().getOutputStream(), failedResponse);
+                    cr.getClientSocket().close();
+                    Logger.log("Closing request due to invalid structure.", LogLevel.network);
+                }
+
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
