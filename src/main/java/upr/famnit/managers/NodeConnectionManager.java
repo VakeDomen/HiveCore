@@ -1,5 +1,7 @@
 package upr.famnit.managers;
 
+import upr.famnit.authentication.KeyVerifier;
+import upr.famnit.authentication.VerificationType;
 import upr.famnit.components.*;
 import upr.famnit.util.Logger;
 import upr.famnit.util.StreamUtil;
@@ -23,18 +25,34 @@ public class NodeConnectionManager extends Thread {
     private LocalDateTime lastPing;
     private int connectionExceptionCount;
 
+    private String identifier;
+
     public NodeConnectionManager(ServerSocket nodeServerSocket) throws IOException {
-        System.out.println("Waiting for worker node to connect...");
         nodeSocket = nodeServerSocket.accept();
         connectionOpen = true;
         lastPing = LocalDateTime.now();
         connectionExceptionCount = 0;
-        System.out.println("Worker node connected: " + nodeSocket.getInetAddress());
+        Logger.log("Worker node connected: " + nodeSocket.getInetAddress(), LogLevel.status);
     }
 
     @Override
     public void run() {
         Logger.log("Worker thread started.", LogLevel.status);
+        try {
+            this.identifier = authenticateNode();
+            Logger.log("Worker authenticated: " + this.identifier, LogLevel.status);
+        } catch (IOException e) {
+            Logger.log("Error authenticating node: " + e.getMessage(), LogLevel.error);
+        }
+
+        if (identifier == null) {
+            try {
+                closeConnection();
+            } catch (IOException e) {
+                connectionOpen = false;
+            }
+        }
+
         while (connectionOpen && nodeSocket.isConnected()) {
             try {
 
@@ -61,6 +79,19 @@ public class NodeConnectionManager extends Thread {
             }
         }
         Logger.log("Worker thread closing.", LogLevel.status);
+    }
+
+    private String authenticateNode() throws IOException {
+        Request request = new Request(nodeSocket);
+        if (!request.getProtocol().equals("HIVE") || !request.getMethod().equals("AUTH")) {
+            throw new IOException("First message should be authentication");
+        }
+
+        if (!KeyVerifier.verifyKey(request.getUri(), VerificationType.NODE)) {
+            throw new IOException("Not valid authentication key.");
+        }
+
+        return request.getUri();
     }
 
     private void handleRequest(Request request) throws IOException {

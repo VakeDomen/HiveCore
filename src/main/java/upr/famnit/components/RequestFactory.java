@@ -4,7 +4,7 @@ public class RequestFactory {
     public static Request EmptyQueResponse() {
         return new Request(
                 "HIVE",
-                "POLL",
+                "PONG",
                 "/",
                 null,
                 null

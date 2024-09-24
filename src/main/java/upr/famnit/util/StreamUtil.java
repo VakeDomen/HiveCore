@@ -5,7 +5,6 @@ import upr.famnit.components.Request;
 import upr.famnit.components.Response;
 
 import java.io.*;
-import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
