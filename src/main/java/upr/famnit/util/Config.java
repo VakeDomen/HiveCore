@@ -22,7 +22,7 @@ public class Config {
     // will be closed
     public static final int NODE_CONNECTION_TIMEOUT = 300;
 
-    // number of milliseconds to sleep when there is an error with communicating
-    // with the worker node. Gives the worker time to error-correct before trying again
-    public static final int WORKER_GRACE_TIME = 1000;
+    // number of allowed exceptions when communicating to an unstable worker node
+    // if the threshold is reached the connection is terminated
+    public static final int CONNECTION_EXCEPTION_THRESHOLD = 5;
 }

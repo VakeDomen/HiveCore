@@ -201,7 +201,6 @@ public class StreamUtil {
             if (chunkSizeLine == null) {
                 throw new IOException("Unexpected end of stream while reading chunk size");
             }
-//            Logger.log("Chunk size line: " + chunkSizeLine, LogLevel.network);
             out.write((chunkSizeLine + "\r\n").getBytes(StandardCharsets.US_ASCII));
             out.flush();
 

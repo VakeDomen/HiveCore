@@ -33,6 +33,7 @@ public class NodeServer implements Runnable {
         } finally {
             try {
                 Logger.log("Waiting for monitor to stop...", LogLevel.status);
+                this.monitor.stopMonitoring();
                 this.monitor.join();
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);

@@ -11,11 +11,11 @@ import java.util.Map;
 
 public class Request {
 
-    private String protocol;
-    private String method;
-    private String uri;
-    private Map<String, String> headers;
-    private byte[] body;
+    private final String protocol;
+    private final String method;
+    private final String uri;
+    private final Map<String, String> headers;
+    private final byte[] body;
 
     public Request(String protocol, String method, String uri, Map<String, String> headers, byte[] body) {
         this.protocol = protocol;
@@ -56,9 +56,10 @@ public class Request {
         if (("POST".equalsIgnoreCase(method) || "PUT".equalsIgnoreCase(method)) && contentLength > 0) {
             this.body = StreamUtil.readRequestBody(clientInputStream, contentLength);
             Logger.log("Read request body of length " + contentLength + " bytes.", LogLevel.info);
+        } else {
+            this.body = null;
         }
     }
-
 
     public String getProtocol() {
         return protocol;

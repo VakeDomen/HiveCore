@@ -54,4 +54,8 @@ public class NodeConnectionMonitor extends Thread {
     public synchronized void addNode(NodeConnectionManager manager) {
         this.nodes.add(manager);
     }
+
+    public void stopMonitoring() {
+        this.monitoring = false;
+    }
 }

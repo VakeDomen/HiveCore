@@ -11,9 +11,10 @@ import java.net.Socket;
 import static upr.famnit.util.Config.PROXY_PORT;
 
 public class ClientServer implements Runnable {
-    private ServerSocket serverSocket;
 
-    public ClientServer(NodeServer nodeServer) throws IOException {
+    private final ServerSocket serverSocket;
+
+    public ClientServer() throws IOException {
         this.serverSocket = new ServerSocket(PROXY_PORT);
     }
 

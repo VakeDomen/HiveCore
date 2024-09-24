@@ -11,7 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.Map;
 
-import static upr.famnit.util.Config.WORKER_GRACE_TIME;
+import static upr.famnit.util.Config.CONNECTION_EXCEPTION_THRESHOLD;
 
 /**
  * Handles the connection from the Node.
@@ -21,12 +21,14 @@ public class NodeConnectionManager extends Thread {
     private final Socket nodeSocket;
     private boolean connectionOpen;
     private LocalDateTime lastPing;
+    private int connectionExceptionCount;
 
     public NodeConnectionManager(ServerSocket nodeServerSocket) throws IOException {
         System.out.println("Waiting for worker node to connect...");
         nodeSocket = nodeServerSocket.accept();
         connectionOpen = true;
         lastPing = LocalDateTime.now();
+        connectionExceptionCount = 0;
         System.out.println("Worker node connected: " + nodeSocket.getInetAddress());
     }
 
@@ -35,14 +37,26 @@ public class NodeConnectionManager extends Thread {
         Logger.log("Worker thread started.", LogLevel.status);
         while (connectionOpen && nodeSocket.isConnected()) {
             try {
+
                 Request request = new Request(nodeSocket);
                 handleRequest(request);
+
             } catch (IOException e) {
-                Logger.log("Problem receiving request from worker node...", LogLevel.error);
-                try {
-                    Thread.sleep(WORKER_GRACE_TIME);
-                } catch (InterruptedException ex) {
+
+                connectionExceptionCount += 1;
+                Logger.log("Problem receiving request from worker node. Count: " + connectionExceptionCount, LogLevel.error);
+
+                if (connectionExceptionCount >= CONNECTION_EXCEPTION_THRESHOLD) {
+                    Logger.log("Too many exceptions. Closing connection.", LogLevel.warn);
                     connectionOpen = false;
+                }
+
+                if (!connectionOpen) {
+                    try {
+                        closeConnection();
+                    } catch (IOException ex) {
+                        throw new RuntimeException(ex);
+                    }
                 }
             }
         }

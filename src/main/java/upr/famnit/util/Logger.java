@@ -27,24 +27,12 @@ public class Logger {
         String logMessage;
 
         switch (type) {
-            case warn:
-                logMessage = WARN + "[" + timestamp + "][" + threadName + "]" + RESET + " " + WARN + "Warn: " + RESET + msg;
-                break;
-            case error:
-                logMessage = ERROR + "[" + timestamp + "][" + threadName + "]" + RESET + " " + ERROR + "Error: " + RESET + msg;
-                break;
-            case info:
-                logMessage = INFO + "[" + timestamp + "][" + threadName + "]" + RESET + " " + INFO + "Info: " + RESET + msg;
-                break;
-            case network:
-                logMessage = NETWORK + "[" + timestamp + "][" + threadName + "]" + RESET + " " + NETWORK + "Network: " + RESET + msg;
-                break;
-            case status:
-                logMessage = STATUS + "[" + timestamp + "][" + threadName + "]" + RESET + " " + STATUS + "Status: " + RESET + msg;
-                break;
-            default:
-                logMessage = WHITE + "[" + timestamp + "][" + threadName + "]" + RESET + " " + WHITE + msg + RESET;
-                break;
+            case warn -> logMessage = WARN + "[" + timestamp + "][" + threadName + "]" + RESET + " " + WARN + "Warn: " + RESET + msg;
+            case error -> logMessage = ERROR + "[" + timestamp + "][" + threadName + "]" + RESET + " " + ERROR + "Error: " + RESET + msg;
+            case info -> logMessage = INFO + "[" + timestamp + "][" + threadName + "]" + RESET + " " + INFO + "Info: " + RESET + msg;
+            case network -> logMessage = NETWORK + "[" + timestamp + "][" + threadName + "]" + RESET + " " + NETWORK + "Network: " + RESET + msg;
+            case status -> logMessage = STATUS + "[" + timestamp + "][" + threadName + "]" + RESET + " " + STATUS + "Status: " + RESET + msg;
+            default -> logMessage = WHITE + "[" + timestamp + "][" + threadName + "]" + RESET + " " + WHITE + msg + RESET;
         }
 
         System.out.println(logMessage);

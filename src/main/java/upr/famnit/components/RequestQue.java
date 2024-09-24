@@ -9,7 +9,7 @@ import java.util.List;
 
 public class RequestQue {
 
-    private static HashMap<String, List<ClientRequest>> queue = new HashMap<>();
+    private static final HashMap<String, List<ClientRequest>> queue = new HashMap<>();
 
     public static synchronized ClientRequest getTask(String modelName) {
         List<ClientRequest> modelQue = queue.get(modelName);
