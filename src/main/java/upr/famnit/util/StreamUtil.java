@@ -6,9 +6,12 @@ import upr.famnit.components.Response;
 
 import java.io.*;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
+
+import static upr.famnit.util.Config.MESSAGE_CHUNK_BUFFER_SIZE;
 
 public class StreamUtil {
 
@@ -249,7 +252,7 @@ public class StreamUtil {
      */
     public static void readAndForwardFixedLengthBody(InputStream in, OutputStream out, int contentLength) throws IOException {
         Logger.log("Receiving fixed length response...", LogLevel.network);
-        byte[] buffer = new byte[8192];
+        byte[] buffer = new byte[MESSAGE_CHUNK_BUFFER_SIZE];
         int totalBytesRead = 0;
         int bytesRead;
         while (totalBytesRead < contentLength) {
@@ -273,7 +276,7 @@ public class StreamUtil {
      */
     public static void readAndForwardUntilEOF(InputStream in, OutputStream out) throws IOException {
         Logger.log("Receiving unknown length response...", LogLevel.network);
-        byte[] buffer = new byte[8192];
+        byte[] buffer = new byte[MESSAGE_CHUNK_BUFFER_SIZE];
         int bytesRead;
         while ((bytesRead = in.read(buffer)) != -1) {
             out.write(buffer, 0, bytesRead);
@@ -312,22 +315,27 @@ public class StreamUtil {
     public static String readLine(InputStream in) throws IOException {
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
         int b;
-        while ((b = in.read()) != -1) {
-            if (b == '\r') {
-                int next = in.read();
-                if (next == '\n') {
+        try {
+            while ((b = in.read()) != -1) {
+                if (b == '\r') {
+                    int next = in.read();
+                    if (next == '\n') {
+                        break;
+                    } else {
+                        buffer.write(b);
+                        if (next != -1) {
+                            buffer.write(next);
+                        }
+                    }
+                } else if (b == '\n') {
                     break;
                 } else {
                     buffer.write(b);
-                    if (next != -1) {
-                        buffer.write(next);
-                    }
                 }
-            } else if (b == '\n') {
-                break;
-            } else {
-                buffer.write(b);
             }
+        } catch (SocketTimeoutException e) {
+            // Handle timeout case, maybe log or throw a custom exception
+            throw new IOException("Read timed out", e);
         }
         if (b == -1 && buffer.size() == 0) {
             return null;

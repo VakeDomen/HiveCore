@@ -24,8 +24,7 @@ public class ClientRequest {
         // Set a timeout for the client socket
         clientSocket.setSoTimeout(PROXY_TIMEOUT_MS);  // 30 seconds timeout
 
-        InputStream clientInputStream = clientSocket.getInputStream();
-        this.request = new Request(clientInputStream);
+        this.request = new Request(clientSocket);
 //        } catch (IOException e) {
 //            Logger.log(e.getMessage(), LogLevel.error);
 //            Logger.log("Closing connection to client.", LogLevel.error);

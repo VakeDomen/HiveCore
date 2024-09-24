@@ -15,4 +15,14 @@ public class Config {
     // buffer size for parsing response chunks received from nodes
     // should be enough...
     public static final int MESSAGE_CHUNK_BUFFER_SIZE = 8192;
+
+    // number of seconds to wait before killing connection to worker node
+    // the seconds between last message received from the worker node
+    // if there is no valid request completed in time specified, the connection
+    // will be closed
+    public static final int NODE_CONNECTION_TIMEOUT = 300;
+
+    // number of milliseconds to sleep when there is an error with communicating
+    // with the worker node. Gives the worker time to error-correct before trying again
+    public static final int WORKER_GRACE_TIME = 1000;
 }

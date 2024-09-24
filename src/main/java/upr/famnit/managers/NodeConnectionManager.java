@@ -8,7 +8,10 @@ import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.Map;
+
+import static upr.famnit.util.Config.WORKER_GRACE_TIME;
 
 /**
  * Handles the connection from the Node.
@@ -17,31 +20,59 @@ public class NodeConnectionManager extends Thread {
 
     private final Socket nodeSocket;
     private boolean connectionOpen;
+    private LocalDateTime lastPing;
 
     public NodeConnectionManager(ServerSocket nodeServerSocket) throws IOException {
         System.out.println("Waiting for worker node to connect...");
         nodeSocket = nodeServerSocket.accept();
         connectionOpen = true;
+        lastPing = LocalDateTime.now();
         System.out.println("Worker node connected: " + nodeSocket.getInetAddress());
     }
 
     @Override
     public void run() {
-        while (connectionOpen) {
+        Logger.log("Worker thread started.", LogLevel.status);
+        while (connectionOpen && nodeSocket.isConnected()) {
             try {
-                Request request = new Request(nodeSocket.getInputStream());
-                ClientRequest clientRequest = RequestQue.getTask("mistral-nemo");
-                if (clientRequest == null) {
-                    Request emptyQueResponse = RequestFactory.EmptyQueResponse();
-                    StreamUtil.sendRequest(nodeSocket.getOutputStream(), emptyQueResponse);
-                    continue;
-                }
-                proxyRequestToNode(clientRequest);
-
+                Request request = new Request(nodeSocket);
+                handleRequest(request);
             } catch (IOException e) {
-                throw new RuntimeException(e);
+                Logger.log("Problem receiving request from worker node...", LogLevel.error);
+                try {
+                    Thread.sleep(WORKER_GRACE_TIME);
+                } catch (InterruptedException ex) {
+                    connectionOpen = false;
+                }
             }
         }
+        Logger.log("Worker thread closing.", LogLevel.status);
+    }
+
+    private void handleRequest(Request request) throws IOException {
+        if (request.getProtocol().equals("HIVE")) {
+            switch (request.getMethod()) {
+                case "POLL" -> handlePollRequest(request);
+                case null, default -> handlePing(request);
+            }
+        }
+    }
+
+    private void handlePing(Request request) {
+        lastPing = LocalDateTime.now();
+    }
+
+    private void handlePollRequest(Request request) throws IOException {
+        handlePing(request);
+
+        ClientRequest clientRequest = RequestQue.getTask(request.getUri());
+        if (clientRequest == null) {
+            Request emptyQueResponse = RequestFactory.EmptyQueResponse();
+            StreamUtil.sendRequest(nodeSocket.getOutputStream(), emptyQueResponse);
+            return;
+        }
+
+        proxyRequestToNode(clientRequest);
     }
 
     public synchronized void proxyRequestToNode(ClientRequest clientRequest) throws IOException {
@@ -86,9 +117,12 @@ public class NodeConnectionManager extends Thread {
         Logger.log("Finished forwarding response to client.", LogLevel.network);
     }
 
-    public synchronized void proxyRequestToNode(String protocol, String method, String uri,
-                                                Map<String, String> headers, byte[] requestBody,
-                                                Socket clientSocket) throws IOException {
+    public synchronized LocalDateTime getLastPing() {
+        return lastPing;
+    }
 
+    public synchronized void closeConnection() throws IOException {
+        this.connectionOpen = false;
+        this.nodeSocket.close();
     }
 }

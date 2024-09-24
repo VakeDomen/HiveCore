@@ -5,6 +5,7 @@ import upr.famnit.util.StreamUtil;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.Socket;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -24,8 +25,12 @@ public class Request {
         this.body = body;
     }
 
-    public Request(InputStream clientInputStream) throws IOException {
+    public Request(Socket socket) throws IOException {
         // Read the client's request line
+        if (socket.isClosed() || !socket.isConnected()) {
+            throw new IOException("Socket closed or not connected");
+        }
+        InputStream clientInputStream = socket.getInputStream();
         String requestLine = StreamUtil.readLine(clientInputStream);
         if (requestLine == null || requestLine.isEmpty()) {
             throw new IOException("Received empty request from client. ");
@@ -36,7 +41,7 @@ public class Request {
         this.method = requestParts[0];
         this.uri = requestParts[1];
         this.protocol = requestParts[2];
-        Logger.log("Request Line: " + requestLine, LogLevel.info);
+
         if (protocol.equals("HIVE")) {
             this.headers = new LinkedHashMap<>();
             this.body = null;
