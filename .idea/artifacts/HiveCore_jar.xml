@@ -7,6 +7,9 @@
       </element>
       <element id="module-output" name="HiveCore" />
       <element id="library" level="project" name="Maven: com.google.errorprone:error_prone_annotations:2.27.0" />
+      <element id="library" level="project" name="Maven: com.google.code.gson:gson:2.11.0" />
+      <element id="library" level="project" name="Maven: org.java-websocket:Java-WebSocket:1.5.7" />
+      <element id="library" level="project" name="Maven: org.slf4j:slf4j-api:2.0.6" />
     </root>
   </artifact>
 </component>
