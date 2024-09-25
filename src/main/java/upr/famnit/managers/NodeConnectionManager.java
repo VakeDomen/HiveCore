@@ -1,6 +1,6 @@
 package upr.famnit.managers;
 
-import upr.famnit.authentication.KeyVerifier;
+import upr.famnit.authentication.KeyUtil;
 import upr.famnit.authentication.VerificationType;
 import upr.famnit.components.*;
 import upr.famnit.util.Logger;
@@ -24,14 +24,14 @@ public class NodeConnectionManager extends Thread {
     private boolean connectionOpen;
     private LocalDateTime lastPing;
     private int connectionExceptionCount;
-
-    private String identifier;
+    private String nodeName;
 
     public NodeConnectionManager(ServerSocket nodeServerSocket) throws IOException {
         nodeSocket = nodeServerSocket.accept();
         connectionOpen = true;
         lastPing = LocalDateTime.now();
         connectionExceptionCount = 0;
+        nodeName = null;
         Logger.log("Worker node connected: " + nodeSocket.getInetAddress(), LogLevel.status);
     }
 
@@ -39,18 +39,9 @@ public class NodeConnectionManager extends Thread {
     public void run() {
         Logger.log("Worker thread started.", LogLevel.status);
         try {
-            this.identifier = authenticateNode();
-            Logger.log("Worker authenticated: " + this.identifier, LogLevel.status);
+            authenticateNode();
         } catch (IOException e) {
-            Logger.log("Error authenticating node: " + e.getMessage(), LogLevel.error);
-        }
-
-        if (identifier == null) {
-            try {
-                closeConnection();
-            } catch (IOException e) {
-                connectionOpen = false;
-            }
+            Logger.log("Error authenticating worker node: " + e.getMessage(), LogLevel.error);
         }
 
         while (connectionOpen && nodeSocket.isConnected()) {
@@ -81,17 +72,37 @@ public class NodeConnectionManager extends Thread {
         Logger.log("Worker thread closing.", LogLevel.status);
     }
 
-    private String authenticateNode() throws IOException {
+    private void authenticateNode() throws IOException {
+        try {
+            nodeName = waitForAuthRequestAndValidate();
+            Logger.log("Worker authenticated: " + this.nodeName, LogLevel.status);
+        } catch (IOException e) {
+            Logger.log("Error authenticating node: " + e.getMessage(), LogLevel.error);
+        }
+
+        if (nodeName == null) {
+            try {
+                closeConnection();
+            } catch (IOException e) {
+                connectionOpen = false;
+            }
+            return;
+        }
+
+        Thread.currentThread().setName(nodeName);
+    }
+
+    private String waitForAuthRequestAndValidate() throws IOException {
         Request request = new Request(nodeSocket);
         if (!request.getProtocol().equals("HIVE") || !request.getMethod().equals("AUTH")) {
             throw new IOException("First message should be authentication");
         }
 
-        if (!KeyVerifier.verifyKey(request.getUri(), VerificationType.NODE)) {
+        if (!KeyUtil.verifyKey(request.getUri(), VerificationType.NodeConnection)) {
             throw new IOException("Not valid authentication key.");
         }
 
-        return request.getUri();
+        return KeyUtil.nameKey(request.getUri());
     }
 
     private void handleRequest(Request request) throws IOException {

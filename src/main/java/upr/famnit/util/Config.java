@@ -25,4 +25,9 @@ public class Config {
     // number of allowed exceptions when communicating to an unstable worker node
     // if the threshold is reached the connection is terminated
     public static final int CONNECTION_EXCEPTION_THRESHOLD = 5;
+
+    // sqlite database url
+    // used to store access keys
+    public static final String DATABASE_URL = "jdbc:sqlite:sqlite.db";
+
 }

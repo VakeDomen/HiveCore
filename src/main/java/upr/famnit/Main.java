@@ -1,16 +1,20 @@
 package upr.famnit;
 
 import upr.famnit.components.LogLevel;
+import upr.famnit.managers.DatabaseManager;
 import upr.famnit.network.ClientServer;
 import upr.famnit.network.NodeServer;
 import upr.famnit.util.Logger;
 
 import java.io.*;
+import java.sql.SQLException;
 
 public class Main {
 
     public static void main(String[] args) {
         try {
+            DatabaseManager.createKeysTable();
+
             NodeServer nodeServer = new NodeServer();
             Thread nodeServerThread = new Thread(nodeServer);
 
@@ -23,7 +27,7 @@ public class Main {
             nodeServerThread.join();
             clientServerThread.join();
 
-        } catch (IOException | InterruptedException e) {
+        } catch (IOException | SQLException | InterruptedException e) {
             Logger.log("An error occurred in the main thread: " + e.getMessage(), LogLevel.error);
             e.printStackTrace();
         }
