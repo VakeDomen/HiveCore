@@ -1,8 +1,6 @@
 package upr.famnit.managers;
 
-import upr.famnit.components.Key;
-import upr.famnit.components.LogLevel;
-import upr.famnit.components.Role;
+import upr.famnit.authentication.Key;
 import upr.famnit.util.Logger;
 
 import java.sql.*;

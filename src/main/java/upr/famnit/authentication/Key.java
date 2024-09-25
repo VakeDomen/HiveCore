@@ -1,4 +1,4 @@
-package upr.famnit.components;
+package upr.famnit.authentication;
 
 public class Key {
     private final int id;
@@ -24,12 +24,7 @@ public class Key {
         this.id = id;
         this.name = name;
         this.value = value;
-        switch (role) {
-            case "Client" -> this.role = Role.Client;
-            case "Worker" -> this.role = Role.Worker;
-            case "Admin" -> this.role = Role.Admin;
-            default -> throw new IllegalStateException("Unexpected value: " + role);
-        }
+        this.role = RoleUtil.fromString(role);
     }
 
     public int getId() {

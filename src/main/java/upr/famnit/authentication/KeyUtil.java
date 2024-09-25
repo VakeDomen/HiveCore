@@ -1,8 +1,6 @@
 package upr.famnit.authentication;
 
-import upr.famnit.components.Key;
 import upr.famnit.components.LogLevel;
-import upr.famnit.components.Role;
 import upr.famnit.managers.DatabaseManager;
 import upr.famnit.util.Logger;
 
