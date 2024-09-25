@@ -8,6 +8,9 @@ public class Config {
     // Port for Node connection
     public static final int NODE_CONNECTION_PORT = 7777;
 
+    // Port where connection for managing proxy is hosted
+    public static final int MANAGEMENT_CONNECTION_PORT = 6668;
+
     // time for the message pipeline to complete before
     // timeout is sent to the client
     public static final int PROXY_TIMEOUT_MS = 30_000;

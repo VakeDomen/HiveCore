@@ -4,6 +4,7 @@ import upr.famnit.authentication.Key;
 import upr.famnit.util.Logger;
 
 import java.sql.*;
+import java.util.ArrayList;
 
 import static upr.famnit.util.Config.DATABASE_URL;
 
@@ -61,5 +62,22 @@ public class DatabaseManager {
                 return null;
             }
         }
+    }
+
+    public static ArrayList<Key> getAllKeys() throws SQLException {
+        String sql = "SELECT * FROM keys";
+        ArrayList<Key> keys = new ArrayList<>();
+        try (Connection conn = connect(); PreparedStatement stmt = conn.prepareStatement(sql)) {
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                keys.add(new Key(
+                    rs.getInt("id"),
+                    rs.getString("name"),
+                    rs.getString("value"),
+                    rs.getString("role")
+                ));
+            }
+        }
+        return keys;
     }
 }

@@ -4,5 +4,23 @@ public enum Role {
     Client,
     Worker,
     Admin,
-    Unknown
+    Unknown;
+
+    @Override
+    public String toString() {
+        switch (this) {
+            case Client -> {
+                return "Client";
+            }
+            case Worker -> {
+                return "Worker";
+            }
+            case Admin -> {
+                return "Admin";
+            }
+            default -> {
+                return "Unknown";
+            }
+        }
+    }
 }

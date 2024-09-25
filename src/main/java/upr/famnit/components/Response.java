@@ -4,17 +4,28 @@ import java.util.Map;
 
 public class Response {
 
-    private String protocol;
-    private int code;
-    private String text;
-    private Map<String, String> headers;
+    private final String protocol;
+    private final int code;
+    private final String text;
+    private final Map<String, String> headers;
+    private final byte[] body;
 
     public Response(String protocol, int code, String text, Map<String, String> headers) {
         this.protocol = protocol;
         this.code = code;
         this.text = text;
         this.headers = headers;
+        this.body = null;
     }
+
+    public Response(String protocol, int code, String text, Map<String, String> headers, byte[] body) {
+        this.protocol = protocol;
+        this.code = code;
+        this.text = text;
+        this.headers = headers;
+        this.body = body;
+    }
+
     public String getProtocol() {
         return protocol;
     }
@@ -29,5 +40,9 @@ public class Response {
 
     public Map<String, String> getHeaders() {
         return headers;
+    }
+
+    public byte[] getBody() {
+        return body;
     }
 }

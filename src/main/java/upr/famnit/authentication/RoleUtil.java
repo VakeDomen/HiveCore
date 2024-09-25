@@ -17,21 +17,4 @@ public class RoleUtil {
             }
         }
     }
-
-    public static String toString(Role role) {
-        switch (role) {
-            case Client -> {
-                return "Client";
-            }
-            case Worker -> {
-                return "Worker";
-            }
-            case Admin -> {
-                return "Admin";
-            }
-            default -> {
-                return "Unknown";
-            }
-        }
-    }
 }

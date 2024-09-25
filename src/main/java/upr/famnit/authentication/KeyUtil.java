@@ -23,6 +23,23 @@ public class KeyUtil {
         return fethcedKey.getName();
     }
 
+    public static Role getKeyRole(String key) {
+        Key fethcedKey;
+        try {
+            fethcedKey = DatabaseManager.getKeyByValue(key);
+        } catch (SQLException e) {
+            Logger.log("Failed fetching key from database: " + key, LogLevel.error);
+            return Role.Unknown;
+        }
+
+        if (fethcedKey == null) {
+            Logger.log("Can't find key in database: " + key, LogLevel.error);
+            return Role.Unknown;
+        }
+
+        return fethcedKey.getRole();
+    }
+
     public static boolean verifyKey(String key, VerificationType type) {
         Key fethcedKey;
         try {

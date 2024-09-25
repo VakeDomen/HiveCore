@@ -85,13 +85,17 @@ public class StreamUtil {
             return;
         }
 
-        if (response.getHeaders() != null && response.getHeaders().isEmpty()) {
+        if (response.getHeaders() != null && !response.getHeaders().isEmpty()) {
             for (Map.Entry<String, String> entry : response.getHeaders().entrySet()) {
                 outStream.write((entry.getKey() + ": " + entry.getValue() + "\r\n").getBytes(StandardCharsets.UTF_8));
             }
         }
 
         outStream.write("\r\n".getBytes(StandardCharsets.UTF_8));
+        if (response.getBody() != null && response.getBody().length > 0) {
+            outStream.write(response.getBody());
+        }
+
         outStream.flush();
     }
 
@@ -122,8 +126,10 @@ public class StreamUtil {
             return;
         }
 
-        for (Map.Entry<String, String> entry : request.getHeaders().entrySet()) {
-            outStream.write((entry.getKey() + ": " + entry.getValue() + "\r\n").getBytes(StandardCharsets.UTF_8));
+        if (request.getHeaders() != null && !request.getHeaders().isEmpty()) {
+            for (Map.Entry<String, String> entry : request.getHeaders().entrySet()) {
+                outStream.write((entry.getKey() + ": " + entry.getValue() + "\r\n").getBytes(StandardCharsets.UTF_8));
+            }
         }
 
         outStream.write("\r\n".getBytes(StandardCharsets.UTF_8));  // End of headers
@@ -149,7 +155,7 @@ public class StreamUtil {
         while ((headerLine = StreamUtil.readLine(inputStream)) != null && !headerLine.isEmpty()) {
             int separatorIndex = headerLine.indexOf(":");
             if (separatorIndex != -1) {
-                String headerName = headerLine.substring(0, separatorIndex).trim();
+                String headerName = headerLine.substring(0, separatorIndex).trim().toLowerCase();
                 String headerValue = headerLine.substring(separatorIndex + 1).trim();
                 headers.put(headerName, headerValue);
             }

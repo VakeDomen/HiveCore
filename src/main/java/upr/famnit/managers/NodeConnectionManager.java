@@ -160,10 +160,10 @@ public class NodeConnectionManager extends Thread {
         streamToClient.flush();
 
         // Decide how to read the body
-        if (responseHeaders.containsKey("Transfer-Encoding") &&
-                responseHeaders.get("Transfer-Encoding").equalsIgnoreCase("chunked")) {
+        if (responseHeaders.containsKey("transfer-encoding") &&
+                responseHeaders.get("transfer-encoding").equalsIgnoreCase("chunked")) {
             StreamUtil.readAndForwardChunkedBody(streamFromNode, streamToClient);
-        } else if (responseHeaders.containsKey("Content-Length")) {
+        } else if (responseHeaders.containsKey("content-length")) {
             int contentLength = Integer.parseInt(responseHeaders.get("content-length"));
             StreamUtil.readAndForwardFixedLengthBody(streamFromNode, streamToClient, contentLength);
         } else {
