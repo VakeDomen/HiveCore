@@ -26,15 +26,12 @@ public class StreamUtil {
     public static int getTotalLength(String protocol, String method, String uri, Map<String, String> headers, byte[] requestBody) {
         int totalLength = (method + " " + uri + " " + protocol + "\r\n").getBytes(StandardCharsets.UTF_8).length;
 
-        if (protocol.equals("HIVE")) {
-            return totalLength;
-        }
-
-        for (Map.Entry<String, String> entry : headers.entrySet()) {
-            totalLength += (entry.getKey() + ": " + entry.getValue() + "\r\n").getBytes(StandardCharsets.UTF_8).length;
+        if (headers != null && !headers.isEmpty()) {
+            for (Map.Entry<String, String> entry : headers.entrySet()) {
+                totalLength += (entry.getKey() + ": " + entry.getValue() + "\r\n").getBytes(StandardCharsets.UTF_8).length;
+            }
         }
         totalLength += "\r\n".getBytes(StandardCharsets.UTF_8).length;  // End of headers
-
         if (requestBody != null && requestBody.length > 0) {
             totalLength += requestBody.length;  // Add the length of the request body
         }
@@ -118,21 +115,19 @@ public class StreamUtil {
                 request.getBody()
         ));
 
+//        outStream.write("\r\n".getBytes(StandardCharsets.UTF_8));  // End of headers
+
+
         // Write the request to node
         outStream.write((request.getMethod() + " " + request.getUri() + " " + request.getProtocol() + "\r\n").getBytes(StandardCharsets.UTF_8));
-
-        if (request.getProtocol().equals("HIVE")) {
-            outStream.flush();
-            return;
-        }
 
         if (request.getHeaders() != null && !request.getHeaders().isEmpty()) {
             for (Map.Entry<String, String> entry : request.getHeaders().entrySet()) {
                 outStream.write((entry.getKey() + ": " + entry.getValue() + "\r\n").getBytes(StandardCharsets.UTF_8));
             }
         }
-
         outStream.write("\r\n".getBytes(StandardCharsets.UTF_8));  // End of headers
+
         if (request.getBody() != null && request.getBody().length > 0) {
             outStream.write(request.getBody());
         }

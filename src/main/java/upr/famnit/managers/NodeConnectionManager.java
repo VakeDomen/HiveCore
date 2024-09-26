@@ -123,13 +123,22 @@ public class NodeConnectionManager extends Thread {
 
         ClientRequest clientRequest = RequestQue.getTask(request.getUri(), nodeName);
         if (clientRequest == null) {
-            Request emptyQueResponse = RequestFactory.EmptyQueResponse();
-            StreamUtil.sendRequest(nodeSocket.getOutputStream(), emptyQueResponse);
+            StreamUtil.sendRequest(
+                nodeSocket.getOutputStream(),
+                RequestFactory.EmptyQueResponse()
+            );
             return;
         }
         Logger.log("Pulled task.");
 
-        proxyRequestToNode(clientRequest);
+        try {
+            proxyRequestToNode(clientRequest);
+        } catch (IOException e) {
+            StreamUtil.sendResponse(
+                clientRequest.getClientSocket().getOutputStream(),
+                ResponseFactory.BadRequest()
+            );
+        }
     }
 
     public synchronized void proxyRequestToNode(ClientRequest clientRequest) throws IOException {

@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import upr.famnit.util.Config;
 
@@ -22,19 +23,24 @@ public class NodeConnectionMonitor extends Thread {
     @Override
     public void run() {
         Logger.log("Monitor starting...", LogLevel.status);
+        Thread.currentThread().setName("Monitor");
         while (monitoring) {
             LocalDateTime now = LocalDateTime.now();
             ArrayList<NodeConnectionManager> toRemove = new ArrayList<>();
-            ArrayList<String> nodeNames = new ArrayList<>();
+            HashMap<String, NodeConnectionManager> nodeNames = new HashMap<>();
             for (NodeConnectionManager node : nodes) {
                 boolean shouldClose = false;
 
                 // check for same-key usage
-                if (nodeNames.contains(node.getName())) {
-                    shouldClose = true;
-                } else {
-                    nodeNames.add(node.getName());
+                if (!nodeNames.containsKey(node.getName())) {
+                    nodeNames.put(node.getName(), node);
                 }
+
+                NodeConnectionManager existingNode = nodeNames.get(node.getName());
+                if (existingNode != node) {
+                    shouldClose = node.getLastPing().isBefore(existingNode.getLastPing());
+                }
+
 
                 // check for timeouts
                 LocalDateTime lastPing = node.getLastPing();
@@ -46,6 +52,7 @@ public class NodeConnectionMonitor extends Thread {
                 // stop connection if violated any rules
                 if (shouldClose) {
                     try {
+                        Logger.log("Closing node connection: " + node.getName(), LogLevel.warn);
                         node.closeConnection();
                     } catch (IOException e) {
                         throw new RuntimeException(e);
