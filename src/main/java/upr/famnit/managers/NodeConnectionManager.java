@@ -121,12 +121,13 @@ public class NodeConnectionManager extends Thread {
     private void handlePollRequest(Request request) throws IOException {
         handlePing(request);
 
-        ClientRequest clientRequest = RequestQue.getTask(request.getUri());
+        ClientRequest clientRequest = RequestQue.getTask(request.getUri(), nodeName);
         if (clientRequest == null) {
             Request emptyQueResponse = RequestFactory.EmptyQueResponse();
             StreamUtil.sendRequest(nodeSocket.getOutputStream(), emptyQueResponse);
             return;
         }
+        Logger.log("Pulled task.");
 
         proxyRequestToNode(clientRequest);
     }

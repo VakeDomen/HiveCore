@@ -25,10 +25,26 @@ public class NodeConnectionMonitor extends Thread {
         while (monitoring) {
             LocalDateTime now = LocalDateTime.now();
             ArrayList<NodeConnectionManager> toRemove = new ArrayList<>();
+            ArrayList<String> nodeNames = new ArrayList<>();
             for (NodeConnectionManager node : nodes) {
+                boolean shouldClose = false;
+
+                // check for same-key usage
+                if (nodeNames.contains(node.getName())) {
+                    shouldClose = true;
+                } else {
+                    nodeNames.add(node.getName());
+                }
+
+                // check for timeouts
                 LocalDateTime lastPing = node.getLastPing();
                 Duration sinceLastPing = Duration.between(lastPing, now);
                 if (sinceLastPing.getSeconds() > Config.NODE_CONNECTION_TIMEOUT) {
+                    shouldClose = true;
+                }
+
+                // stop connection if violated any rules
+                if (shouldClose) {
                     try {
                         node.closeConnection();
                     } catch (IOException e) {

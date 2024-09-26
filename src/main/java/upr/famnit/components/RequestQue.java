@@ -9,13 +9,24 @@ import java.util.List;
 
 public class RequestQue {
 
-    private static final HashMap<String, List<ClientRequest>> queue = new HashMap<>();
+    private static final HashMap<String, List<ClientRequest>> modelQue = new HashMap<>();
+    private static final HashMap<String, List<ClientRequest>> nodeQue = new HashMap<>();
 
-    public static synchronized ClientRequest getTask(String modelName) {
-        List<ClientRequest> modelQue = queue.get(modelName);
+    public static synchronized ClientRequest getTask(String modelName, String nodeName) {
         ClientRequest task = null;
-        if (modelQue != null && !modelQue.isEmpty()) {
-            task = modelQue.removeFirst();
+
+        List<ClientRequest> specificNodeQue = nodeQue.get(nodeName);
+        if (specificNodeQue != null && !specificNodeQue.isEmpty()) {
+            task = specificNodeQue.removeFirst();
+        }
+
+        if (task != null) {
+            return task;
+        }
+
+        List<ClientRequest> specificModelQue = modelQue.get(modelName);
+        if (specificModelQue != null && !specificModelQue.isEmpty()) {
+            task = specificModelQue.removeFirst();
         }
         return task;
     }
@@ -25,6 +36,13 @@ public class RequestQue {
             return false;
         }
 
+        if (request.getRequest().getHeaders().containsKey("node"))
+            return addToQueByNode(request);
+        else
+            return addToQueByModel(request);
+    }
+
+    private static synchronized boolean addToQueByModel(ClientRequest request) {
         String modelName = StreamUtil.getValueFromJSONBody("model", request.getRequest().getBody());
         Logger.log("Request for model: " + modelName);
 
@@ -33,10 +51,24 @@ public class RequestQue {
             return false;
         }
 
-        queue.putIfAbsent(modelName, new LinkedList<>());
-        List<ClientRequest> modelQue = queue.get(modelName);
-        modelQue.add(request);
+        modelQue.putIfAbsent(modelName, new LinkedList<>());
+        List<ClientRequest> specificModelQue = modelQue.get(modelName);
+        specificModelQue.add(request);
         return true;
     }
 
+    private static synchronized boolean addToQueByNode(ClientRequest request) {
+        String nodeName = request.getRequest().getHeaders().get("node");
+        Logger.log("Request for worker node: " + nodeName);
+
+        if (nodeName == null) {
+            Logger.log("Unable to determine target node for request.", LogLevel.error);
+            return false;
+        }
+
+        nodeQue.putIfAbsent(nodeName, new LinkedList<>());
+        List<ClientRequest> specificNodeQue = nodeQue.get(nodeName);
+        specificNodeQue.add(request);
+        return true;
+    }
 }

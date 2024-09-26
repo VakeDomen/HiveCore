@@ -27,6 +27,7 @@ public class ClientServer implements Runnable {
                 Socket clientSocket = serverSocket.accept();
                 Logger.log("Client connected: " + clientSocket.getRemoteSocketAddress(), LogLevel.network);
                 ClientRequest cr = new ClientRequest(clientSocket);
+
                 if (!RequestQue.addTask(cr)) {
                     Response failedResponse = ResponseFactory.MethodNotAllowed();
                     StreamUtil.sendResponse(cr.getClientSocket().getOutputStream(), failedResponse);
@@ -38,6 +39,5 @@ public class ClientServer implements Runnable {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-
     }
 }
