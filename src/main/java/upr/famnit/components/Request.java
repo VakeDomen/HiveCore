@@ -51,7 +51,7 @@ public class Request {
         // Read the request headers
         this.headers = StreamUtil.readHeaders(clientInputStream);
         Logger.log("Request Headers: " + headers, LogLevel.info);
-        if (("POST".equalsIgnoreCase(method) || "PUT".equalsIgnoreCase(method)) && headers.containsKey("content-length")) {
+        if (headers.containsKey("content-length")) {
             int contentLength = Integer.parseInt(headers.get("content-length"));
             Logger.log("Read request body of length " + contentLength + " bytes.", LogLevel.info);
             this.body = StreamUtil.readRequestBody(clientInputStream, contentLength);
