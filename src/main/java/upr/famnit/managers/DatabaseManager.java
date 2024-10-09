@@ -31,8 +31,6 @@ public class DatabaseManager {
             statement.execute(sql);
             Logger.log("Keys table created or already exists.");
         }
-
-//        insertKey(new Key("Admin", "4fd4bd9f-e748-42f9-b486-771fa78cff7c", Role.Admin));
     }
 
     public static void insertKey(Key key) throws SQLException {

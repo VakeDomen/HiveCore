@@ -34,7 +34,6 @@ public class ClientServer implements Runnable {
                     cr.getClientSocket().close();
                     Logger.log("Closing request due to invalid structure.", LogLevel.network);
                 }
-
             }
         } catch (IOException e) {
             throw new RuntimeException(e);

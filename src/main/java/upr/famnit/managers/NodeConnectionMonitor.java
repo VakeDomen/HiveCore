@@ -1,5 +1,6 @@
 package upr.famnit.managers;
 
+import upr.famnit.authentication.VerificationStatus;
 import upr.famnit.components.LogLevel;
 import upr.famnit.util.Logger;
 
@@ -25,34 +26,15 @@ public class NodeConnectionMonitor extends Thread {
         Logger.log("Monitor starting...", LogLevel.status);
         Thread.currentThread().setName("Monitor");
         while (monitoring) {
-            LocalDateTime now = LocalDateTime.now();
+
             ArrayList<NodeConnectionManager> toRemove = new ArrayList<>();
-            HashMap<String, NodeConnectionManager> nodeNames = new HashMap<>();
             for (NodeConnectionManager node : nodes) {
-                boolean shouldClose = false;
-
-                // check for same-key usage
-                if (!nodeNames.containsKey(node.getName())) {
-                    nodeNames.put(node.getName(), node);
-                }
-
-                NodeConnectionManager existingNode = nodeNames.get(node.getName());
-                if (existingNode != node) {
-                    shouldClose = node.getLastPing().isBefore(existingNode.getLastPing());
-                }
-
-
-                // check for timeouts
-                LocalDateTime lastPing = node.getLastPing();
-                Duration sinceLastPing = Duration.between(lastPing, now);
-                if (sinceLastPing.getSeconds() > Config.NODE_CONNECTION_TIMEOUT) {
-                    shouldClose = true;
-                }
+                NodeStatus status = checkNode(node);
 
                 // stop connection if violated any rules
-                if (shouldClose) {
+                if (status != NodeStatus.Valid) {
                     try {
-                        Logger.log("Closing node connection: " + node.getName(), LogLevel.warn);
+                        Logger.log("Closing node connection (" + node.getName() + ") due to: " + status, LogLevel.warn);
                         node.closeConnection();
                     } catch (IOException e) {
                         throw new RuntimeException(e);
@@ -71,6 +53,55 @@ public class NodeConnectionMonitor extends Thread {
             }
         }
         Logger.log("Monitor stopped.", LogLevel.status);
+    }
+
+    private NodeStatus checkNode(NodeConnectionManager node) {
+        if (!node.isConnectionOpen()) {
+            return NodeStatus.Closed;
+        }
+
+        // stop if node connection has been rejected (key-nonce mismatch)
+        VerificationStatus nodeStatus = node.getVerificationStatus();
+        if (nodeStatus == VerificationStatus.Rejected) {
+            return NodeStatus.PastRejection;
+        }
+
+        // attempt to verify node if waiting for verification
+        if (nodeStatus == VerificationStatus.Waiting) {
+            return verifyKeyAndNonce(node);
+        }
+
+        // check for timeouts
+        LocalDateTime lastPing = node.getLastPing();
+        LocalDateTime now = LocalDateTime.now();
+        Duration sinceLastPing = Duration.between(lastPing, now);
+        if (sinceLastPing.getSeconds() > Config.NODE_CONNECTION_TIMEOUT) {
+            return NodeStatus.Timeout;
+        }
+
+        return NodeStatus.Valid;
+    }
+
+    private NodeStatus verifyKeyAndNonce(NodeConnectionManager node) {
+        String nodeName = node.getNodeName();
+        String nodeNonce = node.getNonce();
+
+
+        for (NodeConnectionManager nodeConnectionManager : nodes) {
+            if (nodeConnectionManager.getVerificationStatus() != VerificationStatus.Verified) {
+                continue;
+            }
+
+            if (
+                    nodeConnectionManager.getNodeName().equals(nodeName) &&
+                    !nodeConnectionManager.getNonce().equals(nodeNonce)
+            ) {
+                return NodeStatus.InvalidNonce;
+            }
+        }
+
+        node.setVerificationStatus(VerificationStatus.Verified);
+        return NodeStatus.Valid;
     }
 
 

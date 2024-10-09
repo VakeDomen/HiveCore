@@ -1,6 +1,7 @@
 package upr.famnit.managers;
 
 import upr.famnit.authentication.KeyUtil;
+import upr.famnit.authentication.VerificationStatus;
 import upr.famnit.authentication.VerificationType;
 import upr.famnit.components.*;
 import upr.famnit.util.Logger;
@@ -26,12 +27,17 @@ public class NodeConnectionManager extends Thread {
     private int connectionExceptionCount;
     private String nodeName;
 
+    private volatile VerificationStatus verificationStatus;
+    private volatile String nonce;
+
     public NodeConnectionManager(ServerSocket nodeServerSocket) throws IOException {
         nodeSocket = nodeServerSocket.accept();
         connectionOpen = true;
         lastPing = LocalDateTime.now();
         connectionExceptionCount = 0;
         nodeName = null;
+        verificationStatus = VerificationStatus.SettingUp;
+        nonce = null;
         Logger.log("Worker node connected: " + nodeSocket.getInetAddress(), LogLevel.status);
     }
 
@@ -74,13 +80,15 @@ public class NodeConnectionManager extends Thread {
 
     private void authenticateNode() throws IOException {
         try {
-            nodeName = waitForAuthRequestAndValidate();
+            waitForAuthRequestAndValidate();
             Logger.log("Worker authenticated: " + this.nodeName, LogLevel.status);
         } catch (IOException e) {
-            Logger.log("Error authenticating node: " + e.getMessage(), LogLevel.error);
+            Logger.log("IOException when authenticating node: " + e.getMessage(), LogLevel.error);
+        } catch (InterruptedException e) {
+            Logger.log("Authenticating node interrupted: " + e.getMessage(), LogLevel.error);
         }
 
-        if (nodeName == null) {
+        if (verificationStatus != VerificationStatus.Verified) {
             try {
                 closeConnection();
             } catch (IOException e) {
@@ -92,17 +100,28 @@ public class NodeConnectionManager extends Thread {
         Thread.currentThread().setName(nodeName);
     }
 
-    private String waitForAuthRequestAndValidate() throws IOException {
+    private void waitForAuthRequestAndValidate() throws IOException, InterruptedException {
         Request request = new Request(nodeSocket);
         if (!request.getProtocol().equals("HIVE") || !request.getMethod().equals("AUTH")) {
             throw new IOException("First message should be authentication");
         }
 
-        if (!KeyUtil.verifyKey(request.getUri(), VerificationType.NodeConnection)) {
+        String[] keyAndNonce = request.getUri().split(";");
+        if (keyAndNonce.length != 2) {
+            throw new IOException("Not valid authentication key and nonce pair.");
+        }
+
+        String key = keyAndNonce[0];
+        String nonce = keyAndNonce[1];
+
+        if (!KeyUtil.verifyKey(key, VerificationType.NodeConnection)) {
             throw new IOException("Not valid authentication key.");
         }
 
-        return KeyUtil.nameKey(request.getUri());
+        this.nonce = nonce;
+        this.nodeName = KeyUtil.nameKey(key);
+        this.verificationStatus = VerificationStatus.Waiting;
+        while (verificationStatus == VerificationStatus.Waiting) sleep(50);
     }
 
     private void handleRequest(Request request) throws IOException {
@@ -121,7 +140,14 @@ public class NodeConnectionManager extends Thread {
     private void handlePollRequest(Request request) throws IOException {
         handlePing(request);
 
-        ClientRequest clientRequest = RequestQue.getTask(request.getUri(), nodeName);
+        String[] models = request.getUri().split(";");
+        ClientRequest clientRequest = null;
+        for (String model : models) {
+            clientRequest = RequestQue.getTask(model, nodeName);
+            if (clientRequest != null) {
+                break;
+            }
+        }
         if (clientRequest == null) {
             StreamUtil.sendRequest(
                 nodeSocket.getOutputStream(),
@@ -185,6 +211,26 @@ public class NodeConnectionManager extends Thread {
 
     public synchronized LocalDateTime getLastPing() {
         return lastPing;
+    }
+
+    public synchronized VerificationStatus getVerificationStatus() {
+        return verificationStatus;
+    }
+
+    public synchronized void setVerificationStatus(VerificationStatus status) {
+        this.verificationStatus = status;
+    }
+
+    public synchronized String getNodeName() {
+        return nodeName;
+    }
+
+    public synchronized String getNonce() {
+        return nonce;
+    }
+
+    public synchronized boolean isConnectionOpen() {
+        return connectionOpen;
     }
 
     public synchronized void closeConnection() throws IOException {
