@@ -30,7 +30,7 @@ public class ProxyManager implements Runnable {
 
     @Override
     public void run() {
-
+        Thread.currentThread().setName("Proxy manager");
         try {
             clientRequest = new ClientRequest(clientSocket);
         } catch (IOException e) {

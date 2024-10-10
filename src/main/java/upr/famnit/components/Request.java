@@ -30,14 +30,20 @@ public class Request {
         if (socket.isClosed() || !socket.isConnected()) {
             throw new IOException("Socket closed or not connected");
         }
+
         InputStream clientInputStream = socket.getInputStream();
         String requestLine = StreamUtil.readLine(clientInputStream);
+
         if (requestLine == null || requestLine.isEmpty()) {
             throw new IOException("Received empty request from client. ");
         }
 
         // Parse the request line
         String[] requestParts = requestLine.split(" ");
+        if (requestParts.length != 3) {
+            throw new IOException("Bad Request");
+        }
+
         this.method = requestParts[0];
         this.uri = requestParts[1];
         this.protocol = requestParts[2];
