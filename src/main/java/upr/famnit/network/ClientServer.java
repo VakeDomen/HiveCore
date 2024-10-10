@@ -20,8 +20,9 @@ public class ClientServer implements Runnable {
 
     @Override
     public void run() {
+        Thread.currentThread().setName("ClientServer");
         try {
-            Logger.log("Proxy server is running on port " + PROXY_PORT + "...");
+            Logger.log("Proxy server is running on port " + PROXY_PORT + "...", LogLevel.network);
             while (true) {
                 // Accept incoming client connection
                 Socket clientSocket = serverSocket.accept();

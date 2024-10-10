@@ -38,7 +38,7 @@ public class NodeConnectionManager extends Thread {
         nodeName = null;
         verificationStatus = VerificationStatus.SettingUp;
         nonce = null;
-        Logger.log("Worker node connected: " + nodeSocket.getInetAddress(), LogLevel.status);
+        Logger.log("Worker node connected: " + nodeSocket.getInetAddress(), LogLevel.network);
     }
 
     @Override

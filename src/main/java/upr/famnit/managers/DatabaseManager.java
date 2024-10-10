@@ -33,7 +33,7 @@ public class DatabaseManager {
         }
     }
 
-    public static void insertKey(Key key) throws SQLException {
+    public static synchronized void insertKey(Key key) throws SQLException {
         String sql = "INSERT INTO keys(name, value, role) VALUES(?, ?, ?)";
         try (Connection conn = connect(); PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, key.getName());
@@ -44,7 +44,7 @@ public class DatabaseManager {
         }
     }
 
-    public static Key getKeyByValue(String value) throws SQLException {
+    public static synchronized Key getKeyByValue(String value) throws SQLException {
         String sql = "SELECT * FROM keys WHERE value = ?";
         try (Connection conn = connect(); PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, value);
@@ -62,7 +62,7 @@ public class DatabaseManager {
         }
     }
 
-    public static ArrayList<Key> getAllKeys() throws SQLException {
+    public static synchronized ArrayList<Key> getAllKeys() throws SQLException {
         String sql = "SELECT * FROM keys";
         ArrayList<Key> keys = new ArrayList<>();
         try (Connection conn = connect(); PreparedStatement stmt = conn.prepareStatement(sql)) {

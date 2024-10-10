@@ -26,10 +26,10 @@ public class ManagementServer implements Runnable {
 
     @Override
     public void run() {
+        Thread.currentThread().setName("ManagementServer");
         try {
-            Logger.log("Management connection server is running on port " + MANAGEMENT_CONNECTION_PORT + "...");
+            Logger.log("Management connection server is running on port " + MANAGEMENT_CONNECTION_PORT + "...", LogLevel.network);
             while (true) {
-                Logger.log("Waiting for management request... ", LogLevel.network);
 
                 Socket clientSocket = serverSocket.accept();
                 Logger.log("Management request received: ", LogLevel.network);

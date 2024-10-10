@@ -20,9 +20,10 @@ public class NodeServer implements Runnable {
 
     @Override
     public void run() {
+        Thread.currentThread().setName("WorkerServer");
         this.monitor.start();
         try {
-            Logger.log("Worker connection server is running on port " + NODE_CONNECTION_PORT + "...");
+            Logger.log("Worker connection server is running on port " + NODE_CONNECTION_PORT + "...", LogLevel.network);
             while (true) {
                 NodeConnectionManager nodeConnection = new NodeConnectionManager(serverSocket);
                 nodeConnection.start();

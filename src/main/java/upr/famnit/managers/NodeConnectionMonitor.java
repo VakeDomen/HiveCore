@@ -23,8 +23,8 @@ public class NodeConnectionMonitor extends Thread {
 
     @Override
     public void run() {
-        Logger.log("Monitor starting...", LogLevel.status);
         Thread.currentThread().setName("Monitor");
+        Logger.log("Monitor starting...", LogLevel.status);
         while (monitoring) {
 
             ArrayList<NodeConnectionManager> toRemove = new ArrayList<>();
