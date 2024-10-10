@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.HashMap;
 
 import upr.famnit.util.Config;
 
@@ -63,7 +62,7 @@ public class NodeConnectionMonitor extends Thread {
         // stop if node connection has been rejected (key-nonce mismatch)
         VerificationStatus nodeStatus = node.getVerificationStatus();
         if (nodeStatus == VerificationStatus.Rejected) {
-            return NodeStatus.PastRejection;
+            return NodeStatus.Rejected;
         }
 
         // attempt to verify node if waiting for verification

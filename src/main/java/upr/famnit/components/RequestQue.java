@@ -5,30 +5,24 @@ import upr.famnit.util.StreamUtil;
 
 import java.util.HashMap;
 import java.util.LinkedList;
-import java.util.List;
+import java.util.Queue;
 
 public class RequestQue {
 
-    private static final HashMap<String, List<ClientRequest>> modelQue = new HashMap<>();
-    private static final HashMap<String, List<ClientRequest>> nodeQue = new HashMap<>();
+    private static final HashMap<String, Queue<ClientRequest>> modelQue = new HashMap<>();
+    private static final HashMap<String, Queue<ClientRequest>> nodeQue = new HashMap<>();
 
     public static synchronized ClientRequest getTask(String modelName, String nodeName) {
-        ClientRequest task = null;
-
-        List<ClientRequest> specificNodeQue = nodeQue.get(nodeName);
+        Queue<ClientRequest> specificNodeQue = nodeQue.get(nodeName);
         if (specificNodeQue != null && !specificNodeQue.isEmpty()) {
-            task = specificNodeQue.removeFirst();
+            return specificNodeQue.poll();
         }
 
-        if (task != null) {
-            return task;
-        }
-
-        List<ClientRequest> specificModelQue = modelQue.get(modelName);
+        Queue<ClientRequest> specificModelQue = modelQue.get(modelName);
         if (specificModelQue != null && !specificModelQue.isEmpty()) {
-            task = specificModelQue.removeFirst();
+            return specificModelQue.poll();
         }
-        return task;
+        return null;
     }
 
     public static synchronized boolean addTask(ClientRequest request) {
@@ -52,9 +46,8 @@ public class RequestQue {
         }
 
         modelQue.putIfAbsent(modelName, new LinkedList<>());
-        List<ClientRequest> specificModelQue = modelQue.get(modelName);
-        specificModelQue.add(request);
-        return true;
+        Queue<ClientRequest> specificModelQue = modelQue.get(modelName);
+        return specificModelQue.add(request);
     }
 
     private static synchronized boolean addToQueByNode(ClientRequest request) {
@@ -67,8 +60,7 @@ public class RequestQue {
         }
 
         nodeQue.putIfAbsent(nodeName, new LinkedList<>());
-        List<ClientRequest> specificNodeQue = nodeQue.get(nodeName);
-        specificNodeQue.add(request);
-        return true;
+        Queue<ClientRequest> specificNodeQue = nodeQue.get(nodeName);
+        return specificNodeQue.add(request);
     }
 }

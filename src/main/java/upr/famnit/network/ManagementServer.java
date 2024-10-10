@@ -1,11 +1,8 @@
 package upr.famnit.network;
 
 import upr.famnit.components.*;
-import upr.famnit.managers.NodeConnectionManager;
-import upr.famnit.managers.NodeConnectionMonitor;
 import upr.famnit.managers.ProxyManager;
 import upr.famnit.util.Logger;
-import upr.famnit.util.StreamUtil;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -30,11 +27,9 @@ public class ManagementServer implements Runnable {
         try {
             Logger.log("Management connection server is running on port " + MANAGEMENT_CONNECTION_PORT + "...", LogLevel.network);
             while (true) {
-
                 Socket clientSocket = serverSocket.accept();
                 Logger.log("Management request received: ", LogLevel.network);
                 executorService.execute(new ProxyManager(clientSocket));
-
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
