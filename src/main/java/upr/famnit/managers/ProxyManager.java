@@ -17,6 +17,7 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Map;
 
 public class ProxyManager implements Runnable {
@@ -39,16 +40,24 @@ public class ProxyManager implements Runnable {
         }
 
         try {
+
+            if (!isAdminRequest()) {
+                respond(ResponseFactory.Unauthorized());
+                return;
+            }
+
             switch (clientRequest.getRequest().getUri()) {
                 case "/key" -> handleKeyRoute();
+                case "/worker" -> handleWorkerRoute();
                 case null, default -> respond(ResponseFactory.NotFound());
             }
+
         } catch (IOException e) {
             Logger.log("Error handling proxy management request: " + e.getMessage(), LogLevel.error);
             throw new RuntimeException(e);
 
         }
-        Logger.log("Management request handled");
+        Logger.log("Management request finished");
     }
 
     private void handleKeyRoute() throws IOException {
@@ -59,12 +68,21 @@ public class ProxyManager implements Runnable {
         }
     }
 
-    private void handleInsertKeyRequest() throws IOException {
-        if (!isAdminRequest()) {
-            respond(ResponseFactory.Unauthorized());
-            return;
+    private void handleWorkerRoute() throws IOException {
+        switch (clientRequest.getRequest().getMethod()) {
+            case "GET" -> handleActiveWorkersRequest();
+            case null, default -> respond(ResponseFactory.NotFound());
         }
+    }
 
+    private void handleActiveWorkersRequest() throws IOException {
+        HashMap<String, Integer> activeConnections = NodeConnectionMonitor.getActiveConnections();
+        Gson gson = new Gson();
+        String body = gson.toJson(activeConnections);
+        respond(ResponseFactory.Ok(body.getBytes(StandardCharsets.UTF_8)));
+    }
+
+    private void handleInsertKeyRequest() throws IOException {
         Gson gson = new Gson();
         String body = new String(clientRequest.getRequest().getBody(), StandardCharsets.UTF_8);
         SubmittedKey submittedKey = gson.fromJson(body, SubmittedKey.class);
@@ -81,10 +99,6 @@ public class ProxyManager implements Runnable {
     }
 
     private void handleListKeysRequest() throws IOException {
-        if (!isAdminRequest()) {
-            respond(ResponseFactory.Unauthorized());
-            return;
-        }
         ArrayList<Key> keys = null;
         try {
              keys = DatabaseManager.getAllKeys();
@@ -124,6 +138,7 @@ public class ProxyManager implements Runnable {
     }
 
     private void respond(Response response) throws IOException {
+        Logger.log("Responding with: " + response.getCode() + " " + response.getText());
         StreamUtil.sendResponse(clientRequest.getClientSocket().getOutputStream(), response);
     }
 }

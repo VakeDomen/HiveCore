@@ -8,13 +8,15 @@ import java.io.IOException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import upr.famnit.util.Config;
 
 public class NodeConnectionMonitor extends Thread {
 
-    private boolean monitoring = true;
-    private final ArrayList<NodeConnectionManager> nodes;
+    private volatile boolean monitoring = true;
+    private static volatile ArrayList<NodeConnectionManager> nodes = new ArrayList<>();
+    private static final Object nodeLock = new Object();
 
     public NodeConnectionMonitor() {
         nodes = new ArrayList<>();
@@ -25,33 +27,39 @@ public class NodeConnectionMonitor extends Thread {
         Thread.currentThread().setName("Monitor");
         Logger.log("Monitor starting...", LogLevel.status);
         while (monitoring) {
-
-            ArrayList<NodeConnectionManager> toRemove = new ArrayList<>();
-            for (NodeConnectionManager node : nodes) {
-                NodeStatus status = checkNode(node);
-
-                // stop connection if violated any rules
-                if (status != NodeStatus.Valid) {
-                    try {
-                        Logger.log("Closing node connection (" + node.getName() + ") due to: " + status, LogLevel.warn);
-                        node.closeConnection();
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-                    toRemove.add(node);
-                }
+            synchronized (nodeLock) {
+                checkOnWorkers();
             }
-
             try {
                 Thread.sleep(500);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
-            for (NodeConnectionManager nodeToRemove : toRemove) {
-                nodes.remove(nodeToRemove);
-            }
         }
         Logger.log("Monitor stopped.", LogLevel.status);
+    }
+
+    private void checkOnWorkers() {
+        ArrayList<NodeConnectionManager> toRemove = new ArrayList<>();
+
+        for (NodeConnectionManager node : nodes) {
+            NodeStatus status = checkNode(node);
+
+            // stop connection if violated any rules
+            if (status != NodeStatus.Valid) {
+                try {
+                    Logger.log("Closing node connection (" + node.getName() + ") due to: " + status, LogLevel.warn);
+                    node.closeConnection();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+                toRemove.add(node);
+            }
+        }
+
+        for (NodeConnectionManager nodeToRemove : toRemove) {
+            nodes.remove(nodeToRemove);
+        }
     }
 
     private NodeStatus checkNode(NodeConnectionManager node) {
@@ -104,11 +112,24 @@ public class NodeConnectionMonitor extends Thread {
     }
 
 
-    public synchronized void addNode(NodeConnectionManager manager) {
-        this.nodes.add(manager);
+    public void addNode(NodeConnectionManager manager) {
+        synchronized (nodeLock) {
+            this.nodes.add(manager);
+        }
     }
 
     public void stopMonitoring() {
         this.monitoring = false;
+    }
+
+    public static HashMap<String, Integer> getActiveConnections() {
+        synchronized (nodeLock) {
+            HashMap<String, Integer> connectedNodes = new HashMap<>();
+            for (NodeConnectionManager node : nodes) {
+                connectedNodes.putIfAbsent(node.getNodeName(), 0);
+                connectedNodes.put(node.getNodeName(), connectedNodes.get(node.getNodeName()) + 1);
+            }
+            return connectedNodes;
+        }
     }
 }

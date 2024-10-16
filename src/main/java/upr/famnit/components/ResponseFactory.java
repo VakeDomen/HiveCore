@@ -9,11 +9,11 @@ public class ResponseFactory {
     }
 
     public static Response Ok() {
-        return new Response("HTTP/1.1", 200, "OK OK", Map.of("Content-Length", "0", "Connection", "close"));
+        return new Response("HTTP/1.1", 200, "OK", Map.of("Content-Length", "0", "Connection", "close"));
     }
 
     public static Response Ok(byte[] body) {
-        return new Response("HTTP/1.1", 200, "OK OK", Map.of("Content-Length", "" + body.length, "Connection", "close"), body);
+        return new Response("HTTP/1.1", 200, "OK", Map.of("Content-Length", "" + body.length, "Connection", "close"), body);
     }
 
     public static Response NotFound() {
