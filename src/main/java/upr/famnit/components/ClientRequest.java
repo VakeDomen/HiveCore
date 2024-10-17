@@ -11,6 +11,7 @@ public class ClientRequest {
 
     private final Socket clientSocket;
     private final Request request;
+    private long queEnterTime;
 
     /**
      * Handles client requests by forwarding them to the Node and writing the response
@@ -33,4 +34,11 @@ public class ClientRequest {
         return request;
     }
 
+    public void stamp() {
+        this.queEnterTime = System.currentTimeMillis();
+    }
+
+    public long getQueEnterTime() {
+        return queEnterTime;
+    }
 }

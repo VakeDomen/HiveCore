@@ -155,7 +155,7 @@ public class NodeConnectionManager extends Thread {
             );
             return;
         }
-        Logger.log("Pulled task.");
+        Logger.log("Pulled task. Task waited: " + (System.currentTimeMillis() - clientRequest.getQueEnterTime()) + "ms", LogLevel.status);
 
         try {
             proxyRequestToNode(clientRequest);

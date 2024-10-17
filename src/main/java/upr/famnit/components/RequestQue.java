@@ -37,6 +37,7 @@ public class RequestQue {
     }
 
     private static synchronized boolean addToQueByModel(ClientRequest request) {
+        request.stamp();
         String modelName = StreamUtil.getValueFromJSONBody("model", request.getRequest().getBody());
         Logger.log("Request for model: " + modelName);
 
@@ -51,6 +52,7 @@ public class RequestQue {
     }
 
     private static synchronized boolean addToQueByNode(ClientRequest request) {
+        request.stamp();
         String nodeName = request.getRequest().getHeaders().get("node");
         Logger.log("Request for worker node: " + nodeName);
 
@@ -63,4 +65,22 @@ public class RequestQue {
         Queue<ClientRequest> specificNodeQue = nodeQue.get(nodeName);
         return specificNodeQue.add(request);
     }
+
+    public static synchronized HashMap<String, Integer> getQueLengths() {
+        HashMap<String, Integer> queLengths = new HashMap<>();
+        for (String model : modelQue.keySet()) {
+            Queue<ClientRequest> specificModelQue = modelQue.get(model);
+            if (specificModelQue != null) {
+                queLengths.put("Model: " + model, specificModelQue.size());
+            }
+        }
+        for (String node : nodeQue.keySet()) {
+            Queue<ClientRequest> specificNodeQue = nodeQue.get(node);
+            if (specificNodeQue != null) {
+                queLengths.put("Node: " + node, specificNodeQue.size());
+            }
+        }
+        return queLengths;
+    }
+
 }

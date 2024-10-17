@@ -5,10 +5,7 @@ import upr.famnit.authentication.Key;
 import upr.famnit.authentication.KeyUtil;
 import upr.famnit.authentication.Role;
 import upr.famnit.authentication.SubmittedKey;
-import upr.famnit.components.ClientRequest;
-import upr.famnit.components.LogLevel;
-import upr.famnit.components.Response;
-import upr.famnit.components.ResponseFactory;
+import upr.famnit.components.*;
 import upr.famnit.util.Logger;
 import upr.famnit.util.StreamUtil;
 
@@ -49,6 +46,7 @@ public class ProxyManager implements Runnable {
             switch (clientRequest.getRequest().getUri()) {
                 case "/key" -> handleKeyRoute();
                 case "/worker" -> handleWorkerRoute();
+                case "/queue" -> handleQueueRoute();
                 case null, default -> respond(ResponseFactory.NotFound());
             }
 
@@ -58,6 +56,13 @@ public class ProxyManager implements Runnable {
 
         }
         Logger.log("Management request finished");
+    }
+
+    private void handleQueueRoute() throws IOException {
+        switch (clientRequest.getRequest().getMethod()) {
+            case "GET" -> handleGetQueLenRequest();
+            case null, default -> respond(ResponseFactory.NotFound());
+        }
     }
 
     private void handleKeyRoute() throws IOException {
@@ -73,6 +78,13 @@ public class ProxyManager implements Runnable {
             case "GET" -> handleActiveWorkersRequest();
             case null, default -> respond(ResponseFactory.NotFound());
         }
+    }
+
+    private void handleGetQueLenRequest() throws IOException {
+        HashMap<String, Integer> que = RequestQue.getQueLengths();
+        Gson gson = new Gson();
+        String body = gson.toJson(que);
+        respond(ResponseFactory.Ok(body.getBytes(StandardCharsets.UTF_8)));
     }
 
     private void handleActiveWorkersRequest() throws IOException {

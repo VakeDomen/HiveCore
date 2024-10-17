@@ -93,7 +93,6 @@ public class NodeConnectionMonitor extends Thread {
         String nodeName = node.getNodeName();
         String nodeNonce = node.getNonce();
 
-
         for (NodeConnectionManager nodeConnectionManager : nodes) {
             if (nodeConnectionManager.getVerificationStatus() != VerificationStatus.Verified) {
                 continue;
@@ -123,13 +122,11 @@ public class NodeConnectionMonitor extends Thread {
     }
 
     public static HashMap<String, Integer> getActiveConnections() {
-        synchronized (nodeLock) {
-            HashMap<String, Integer> connectedNodes = new HashMap<>();
-            for (NodeConnectionManager node : nodes) {
-                connectedNodes.putIfAbsent(node.getNodeName(), 0);
-                connectedNodes.put(node.getNodeName(), connectedNodes.get(node.getNodeName()) + 1);
-            }
-            return connectedNodes;
+        HashMap<String, Integer> connectedNodes = new HashMap<>();
+        for (NodeConnectionManager node : nodes) {
+            connectedNodes.putIfAbsent(node.getNodeName(), 0);
+            connectedNodes.put(node.getNodeName(), connectedNodes.get(node.getNodeName()) + 1);
         }
+        return connectedNodes;
     }
 }
