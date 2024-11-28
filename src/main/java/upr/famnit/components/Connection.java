@@ -9,19 +9,17 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class Connection {
 
     private final Object socketLock = new Object();
-    private final ReentrantLock stateLock = new ReentrantLock();
+    private final Object stateLock = new Object();
 
     private final Socket nodeSocket;
     private final InputStream streamFromNode;
     private final OutputStream streamToNode;
+
     private boolean connectionOpen;
 
 

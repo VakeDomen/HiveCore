@@ -4,39 +4,44 @@ import upr.famnit.util.Logger;
 import upr.famnit.util.StreamUtil;
 
 import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.Queue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ConcurrentMap;
 
 public class RequestQue {
 
-    private static final HashMap<String, Queue<ClientRequest>> modelQue = new HashMap<>();
-    private static final HashMap<String, Queue<ClientRequest>> nodeQue = new HashMap<>();
+    private static final ConcurrentMap<String, ConcurrentLinkedQueue<ClientRequest>> modelQue = new ConcurrentHashMap<>();
+    private static final ConcurrentMap<String, ConcurrentLinkedQueue<ClientRequest>> nodeQue = new ConcurrentHashMap<>();
 
-    public static synchronized ClientRequest getTask(String modelName, String nodeName) {
-        Queue<ClientRequest> specificNodeQue = nodeQue.get(nodeName);
-        if (specificNodeQue != null && !specificNodeQue.isEmpty()) {
-            return specificNodeQue.poll();
+    public static ClientRequest getTask(String modelName, String nodeName) {
+        ConcurrentLinkedQueue<ClientRequest> specificNodeQue = nodeQue.get(nodeName);
+        if (specificNodeQue != null) {
+            ClientRequest request = specificNodeQue.poll();
+            if (request != null) {
+                return request;
+            }
         }
 
-        Queue<ClientRequest> specificModelQue = modelQue.get(modelName);
-        if (specificModelQue != null && !specificModelQue.isEmpty()) {
+        ConcurrentLinkedQueue<ClientRequest> specificModelQue = modelQue.get(modelName);
+        if (specificModelQue != null) {
             return specificModelQue.poll();
         }
         return null;
     }
 
-    public static synchronized boolean addTask(ClientRequest request) {
+    public static boolean addTask(ClientRequest request) {
         if (request.getRequest().getProtocol().equals("HIVE")) {
             return false;
         }
 
-        if (request.getRequest().getHeaders().containsKey("node"))
+        if (request.getRequest().getHeaders().containsKey("node")) {
             return addToQueByNode(request);
-        else
+        } else {
             return addToQueByModel(request);
+        }
     }
 
-    private static synchronized boolean addToQueByModel(ClientRequest request) {
+    private static boolean addToQueByModel(ClientRequest request) {
         request.stamp();
         String modelName = StreamUtil.getValueFromJSONBody("model", request.getRequest().getBody());
         Logger.log("Request for model: " + modelName);
@@ -46,12 +51,11 @@ public class RequestQue {
             return false;
         }
 
-        modelQue.putIfAbsent(modelName, new LinkedList<>());
-        Queue<ClientRequest> specificModelQue = modelQue.get(modelName);
-        return specificModelQue.add(request);
+        modelQue.computeIfAbsent(modelName, k -> new ConcurrentLinkedQueue<>()).add(request);
+        return true;
     }
 
-    private static synchronized boolean addToQueByNode(ClientRequest request) {
+    private static boolean addToQueByNode(ClientRequest request) {
         request.stamp();
         String nodeName = request.getRequest().getHeaders().get("node");
         Logger.log("Request for worker node: " + nodeName);
@@ -61,26 +65,14 @@ public class RequestQue {
             return false;
         }
 
-        nodeQue.putIfAbsent(nodeName, new LinkedList<>());
-        Queue<ClientRequest> specificNodeQue = nodeQue.get(nodeName);
-        return specificNodeQue.add(request);
+        nodeQue.computeIfAbsent(nodeName, k -> new ConcurrentLinkedQueue<>()).add(request);
+        return true;
     }
 
-    public static synchronized HashMap<String, Integer> getQueLengths() {
+    public static HashMap<String, Integer> getQueLengths() {
         HashMap<String, Integer> queLengths = new HashMap<>();
-        for (String model : modelQue.keySet()) {
-            Queue<ClientRequest> specificModelQue = modelQue.get(model);
-            if (specificModelQue != null) {
-                queLengths.put("Model: " + model, specificModelQue.size());
-            }
-        }
-        for (String node : nodeQue.keySet()) {
-            Queue<ClientRequest> specificNodeQue = nodeQue.get(node);
-            if (specificNodeQue != null) {
-                queLengths.put("Node: " + node, specificNodeQue.size());
-            }
-        }
+        modelQue.forEach((model, queue) -> queLengths.put("Model: " + model, queue.size()));
+        nodeQue.forEach((node, queue) -> queLengths.put("Node: " + node, queue.size()));
         return queLengths;
     }
-
 }

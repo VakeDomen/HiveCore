@@ -30,6 +30,7 @@ public class NodeConnectionMonitor extends Thread {
             synchronized (nodeLock) {
                 checkOnWorkers();
             }
+
             try {
                 Thread.sleep(500);
             } catch (InterruptedException e) {

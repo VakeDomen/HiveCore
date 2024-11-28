@@ -22,7 +22,7 @@ public class ClientRequest {
     public ClientRequest(Socket clientSocket) throws IOException {
         this.clientSocket = clientSocket;
         Logger.log("Parsing client request...");
-        clientSocket.setSoTimeout(PROXY_TIMEOUT_MS);  // 30 seconds timeout
+        clientSocket.setSoTimeout(PROXY_TIMEOUT_MS);
         this.request = new Request(clientSocket);
     }
 

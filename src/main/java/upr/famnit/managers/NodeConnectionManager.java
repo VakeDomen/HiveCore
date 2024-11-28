@@ -10,12 +10,7 @@ import upr.famnit.util.StreamUtil;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
-import java.util.Map;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static upr.famnit.util.Config.CONNECTION_EXCEPTION_THRESHOLD;
 
@@ -23,7 +18,6 @@ import static upr.famnit.util.Config.CONNECTION_EXCEPTION_THRESHOLD;
  * Handles the connection from the Node.
  */
 public class NodeConnectionManager extends Thread {
-
 
     private final Connection connection;
     private final NodeData data;

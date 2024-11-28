@@ -33,12 +33,6 @@ public class NodeData {
         statusWriteLock.unlock();
     }
 
-    public void setConnectionExceptionCount(int connectionExceptionCount) {
-        statusWriteLock.lock();
-        this.connectionExceptionCount = connectionExceptionCount;
-        statusWriteLock.unlock();
-    }
-
     public void incrementExceptionCount() {
         statusWriteLock.lock();
         this.connectionExceptionCount++;
