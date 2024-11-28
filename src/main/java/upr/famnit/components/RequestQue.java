@@ -18,13 +18,18 @@ public class RequestQue {
         if (specificNodeQue != null) {
             ClientRequest request = specificNodeQue.poll();
             if (request != null) {
+                request.stampQueueLeave(nodeName);
                 return request;
             }
         }
 
         ConcurrentLinkedQueue<ClientRequest> specificModelQue = modelQue.get(modelName);
         if (specificModelQue != null) {
-            return specificModelQue.poll();
+            ClientRequest request = specificModelQue.poll();
+            if (request != null) {
+                request.stampQueueLeave(nodeName);
+                return request;
+            }
         }
         return null;
     }
@@ -42,7 +47,7 @@ public class RequestQue {
     }
 
     private static boolean addToQueByModel(ClientRequest request) {
-        request.stamp();
+        request.stampQueueEnter();
         String modelName = StreamUtil.getValueFromJSONBody("model", request.getRequest().getBody());
         Logger.log("Request for model: " + modelName);
 
@@ -56,7 +61,7 @@ public class RequestQue {
     }
 
     private static boolean addToQueByNode(ClientRequest request) {
-        request.stamp();
+        request.stampQueueEnter();
         String nodeName = request.getRequest().getHeaders().get("node");
         Logger.log("Request for worker node: " + nodeName);
 

@@ -138,6 +138,16 @@ public class NodeConnectionManager extends Thread {
         try {
             connection.proxyRequestToNode(clientRequest);
         } catch (IOException e) {
+            Logger.log("Proxying request failed: " +
+                    e.getMessage() +
+                    "\nRequest time in que: " +
+                    clientRequest.queTime() +
+                    "\nRequest proxy time: " +
+                    clientRequest.proxyTime() +
+                    "\nTotal time: " +
+                    clientRequest.totalTime(),
+                    LogLevel.error
+            );
             StreamUtil.sendResponse(
                 clientRequest.getClientSocket().getOutputStream(),
                 ResponseFactory.BadRequest()

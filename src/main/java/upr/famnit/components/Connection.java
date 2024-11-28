@@ -74,19 +74,19 @@ public class Connection {
             OutputStream streamToClient = clientRequest.getClientSocket().getOutputStream();
 
             StreamUtil.sendRequest(streamToNode, clientRequest.getRequest());
-            Logger.log("Request forwarded to Node.", LogLevel.network);
+            //Logger.log("Request forwarded to Node.", LogLevel.network);
 
             // Read the status line
             String statusLine = StreamUtil.readLine(streamFromNode);
             if (statusLine == null || statusLine.isEmpty()) {
                 throw new IOException("Failed to read status line from node");
             }
-            Logger.log("Status Line: " + statusLine, LogLevel.info);
+            //Logger.log("Status Line: " + statusLine, LogLevel.info);
             streamToClient.write((statusLine + "\r\n").getBytes(StandardCharsets.US_ASCII));
 
             // Read the response headers
             Map<String, String> responseHeaders = StreamUtil.readHeaders(streamFromNode);
-            Logger.log("Response headers: " + responseHeaders);
+            //Logger.log("Response headers: " + responseHeaders);
 
             // Write headers to the client
             for (Map.Entry<String, String> header : responseHeaders.entrySet()) {
@@ -107,7 +107,8 @@ public class Connection {
                 StreamUtil.readAndForwardUntilEOF(streamFromNode, streamToClient);
             }
 
-            Logger.log("Finished forwarding response to client.", LogLevel.network);
+            clientRequest.stampResponseFinish();
+            //Logger.log("Finished forwarding response to client.", LogLevel.network);
         }
 
     }
