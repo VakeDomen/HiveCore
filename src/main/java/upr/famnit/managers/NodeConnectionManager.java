@@ -13,6 +13,9 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static upr.famnit.util.Config.CONNECTION_EXCEPTION_THRESHOLD;
 
@@ -21,24 +24,15 @@ import static upr.famnit.util.Config.CONNECTION_EXCEPTION_THRESHOLD;
  */
 public class NodeConnectionManager extends Thread {
 
-    private final Socket nodeSocket;
-    private boolean connectionOpen;
-    private LocalDateTime lastPing;
-    private int connectionExceptionCount;
-    private String nodeName;
 
-    private volatile VerificationStatus verificationStatus;
-    private volatile String nonce;
+    private final Connection connection;
+    private final NodeData data;
 
     public NodeConnectionManager(ServerSocket nodeServerSocket) throws IOException {
-        nodeSocket = nodeServerSocket.accept();
-        connectionOpen = true;
-        lastPing = LocalDateTime.now();
-        connectionExceptionCount = 0;
-        nodeName = null;
-        verificationStatus = VerificationStatus.SettingUp;
-        nonce = null;
-        Logger.log("Worker node connected: " + nodeSocket.getInetAddress(), LogLevel.network);
+        Socket socket = nodeServerSocket.accept();
+        connection = new Connection(socket);
+        data = new NodeData();
+        Logger.log("Worker node connected: " + connection.getInetAddress() , LogLevel.network);
     }
 
     @Override
@@ -50,58 +44,51 @@ public class NodeConnectionManager extends Thread {
             Logger.log("Error authenticating worker node: " + e.getMessage(), LogLevel.error);
         }
 
-        while (connectionOpen && nodeSocket.isConnected()) {
+        while (connection.isFine()) {
             try {
-
-                Request request = new Request(nodeSocket);
-                handleRequest(request);
-
+                handleRequest(connection.waitForRequest());
             } catch (IOException e) {
-
-                connectionExceptionCount += 1;
-                Logger.log("Problem receiving request from worker node. Count: " + connectionExceptionCount, LogLevel.error);
-
-                if (connectionExceptionCount >= CONNECTION_EXCEPTION_THRESHOLD) {
-                    Logger.log("Too many exceptions. Closing connection.", LogLevel.warn);
-                    connectionOpen = false;
-                }
-
-                if (!connectionOpen) {
-                    try {
-                        closeConnection();
-                    } catch (IOException ex) {
-                        throw new RuntimeException(ex);
-                    }
-                }
+                handleRequestException(e);
             }
         }
         Logger.log("Worker thread closing.", LogLevel.status);
     }
 
+    private void handleRequestException(IOException e) {
+        data.incrementExceptionCount();
+        Logger.log("Problem receiving request from worker node. Count: " +
+                data.getConnectionExceptionCount() +
+                "\nError: " +
+                e.getMessage(),
+                LogLevel.error
+        );
+
+        if (data.getConnectionExceptionCount() >= CONNECTION_EXCEPTION_THRESHOLD) {
+            Logger.log("Too many exceptions. Closing connection.", LogLevel.warn);
+            connection.close();
+        }
+    }
+
     private void authenticateNode() throws IOException {
         try {
             waitForAuthRequestAndValidate();
-            Logger.log("Worker authenticated: " + this.nodeName, LogLevel.status);
+            Logger.log("Worker authenticated: " + data.getNodeName(), LogLevel.status);
         } catch (IOException e) {
             Logger.log("IOException when authenticating node: " + e.getMessage(), LogLevel.error);
         } catch (InterruptedException e) {
             Logger.log("Authenticating node interrupted: " + e.getMessage(), LogLevel.error);
         }
 
-        if (verificationStatus != VerificationStatus.Verified) {
-            try {
-                closeConnection();
-            } catch (IOException e) {
-                connectionOpen = false;
-            }
+        if (data.getVerificationStatus() != VerificationStatus.Verified) {
+            connection.close();
             return;
         }
 
-        Thread.currentThread().setName(nodeName);
+        Thread.currentThread().setName(data.getNodeName());
     }
 
     private void waitForAuthRequestAndValidate() throws IOException, InterruptedException {
-        Request request = new Request(nodeSocket);
+        Request request = connection.waitForRequest();
         if (!request.getProtocol().equals("HIVE") || !request.getMethod().equals("AUTH")) {
             throw new IOException("First message should be authentication");
         }
@@ -118,10 +105,10 @@ public class NodeConnectionManager extends Thread {
             throw new IOException("Not valid authentication key.");
         }
 
-        this.nonce = nonce;
-        this.nodeName = KeyUtil.nameKey(key);
-        this.verificationStatus = VerificationStatus.Waiting;
-        while (verificationStatus == VerificationStatus.Waiting) sleep(50);
+        data.setNonce(nonce);
+        data.setNodeName(KeyUtil.nameKey(key));
+        data.setVerificationStatus(VerificationStatus.Waiting);
+        while (data.getVerificationStatus() == VerificationStatus.Waiting) sleep(50);
     }
 
     private void handleRequest(Request request) throws IOException {
@@ -134,7 +121,7 @@ public class NodeConnectionManager extends Thread {
     }
 
     private void handlePing(Request request) {
-        lastPing = LocalDateTime.now();
+        data.setLastPing(LocalDateTime.now());
     }
 
     private void handlePollRequest(Request request) throws IOException {
@@ -143,22 +130,19 @@ public class NodeConnectionManager extends Thread {
         String[] models = request.getUri().split(";");
         ClientRequest clientRequest = null;
         for (String model : models) {
-            clientRequest = RequestQue.getTask(model, nodeName);
+            clientRequest = RequestQue.getTask(model, data.getNodeName());
             if (clientRequest != null) {
                 break;
             }
         }
         if (clientRequest == null) {
-            StreamUtil.sendRequest(
-                nodeSocket.getOutputStream(),
-                RequestFactory.EmptyQueResponse()
-            );
+            connection.send(RequestFactory.EmptyQueResponse());
             return;
         }
         Logger.log("Pulled task. Task waited: " + (System.currentTimeMillis() - clientRequest.getQueEnterTime()) + "ms", LogLevel.status);
 
         try {
-            proxyRequestToNode(clientRequest);
+            connection.proxyRequestToNode(clientRequest);
         } catch (IOException e) {
             StreamUtil.sendResponse(
                 clientRequest.getClientSocket().getOutputStream(),
@@ -167,74 +151,31 @@ public class NodeConnectionManager extends Thread {
         }
     }
 
-    public synchronized void proxyRequestToNode(ClientRequest clientRequest) throws IOException {
-        InputStream streamFromNode = nodeSocket.getInputStream();
-        OutputStream streamToNode = nodeSocket.getOutputStream();
-        OutputStream streamToClient = clientRequest.getClientSocket().getOutputStream();
-
-        StreamUtil.sendRequest(streamToNode, clientRequest.getRequest());
-        Logger.log("Request forwarded to Node.", LogLevel.network);
-
-        // Read the status line
-        String statusLine = StreamUtil.readLine(streamFromNode);
-        if (statusLine == null || statusLine.isEmpty()) {
-            throw new IOException("Failed to read status line from node");
-        }
-        Logger.log("Status Line: " + statusLine, LogLevel.info);
-        streamToClient.write((statusLine + "\r\n").getBytes(StandardCharsets.US_ASCII));
-
-        // Read the response headers
-        Map<String, String> responseHeaders = StreamUtil.readHeaders(streamFromNode);
-        Logger.log("Response headers: " + responseHeaders);
-
-        // Write headers to the client
-        for (Map.Entry<String, String> header : responseHeaders.entrySet()) {
-            String headerLine = header.getKey() + ": " + header.getValue();
-            streamToClient.write((headerLine + "\r\n").getBytes(StandardCharsets.US_ASCII));
-        }
-        streamToClient.write("\r\n".getBytes(StandardCharsets.US_ASCII));
-        streamToClient.flush();
-
-        // Decide how to read the body
-        if (responseHeaders.containsKey("transfer-encoding") &&
-                responseHeaders.get("transfer-encoding").equalsIgnoreCase("chunked")) {
-            StreamUtil.readAndForwardChunkedBody(streamFromNode, streamToClient);
-        } else if (responseHeaders.containsKey("content-length")) {
-            int contentLength = Integer.parseInt(responseHeaders.get("content-length"));
-            StreamUtil.readAndForwardFixedLengthBody(streamFromNode, streamToClient, contentLength);
-        } else {
-            StreamUtil.readAndForwardUntilEOF(streamFromNode, streamToClient);
-        }
-
-        Logger.log("Finished forwarding response to client.", LogLevel.network);
+    public LocalDateTime getLastPing() {
+        return data.getLastPing();
     }
 
-    public synchronized LocalDateTime getLastPing() {
-        return lastPing;
+    public VerificationStatus getVerificationStatus() {
+        return data.getVerificationStatus();
     }
 
-    public synchronized VerificationStatus getVerificationStatus() {
-        return verificationStatus;
+    public void setVerificationStatus(VerificationStatus status) {
+        data.setVerificationStatus(status);
     }
 
-    public synchronized void setVerificationStatus(VerificationStatus status) {
-        this.verificationStatus = status;
+    public String getNodeName() {
+        return data.getNodeName();
     }
 
-    public synchronized String getNodeName() {
-        return nodeName;
+    public String getNonce() {
+        return data.getNonce();
     }
 
-    public synchronized String getNonce() {
-        return nonce;
+    public boolean isConnectionOpen() {
+        return connection.isFine();
     }
 
-    public synchronized boolean isConnectionOpen() {
-        return connectionOpen;
-    }
-
-    public synchronized void closeConnection() throws IOException {
-        this.connectionOpen = false;
-        this.nodeSocket.close();
+    public void closeConnection() throws IOException {
+        connection.close();
     }
 }
