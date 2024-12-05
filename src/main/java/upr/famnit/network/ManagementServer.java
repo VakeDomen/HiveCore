@@ -1,6 +1,5 @@
 package upr.famnit.network;
 
-import upr.famnit.components.*;
 import upr.famnit.managers.ProxyManager;
 import upr.famnit.util.Logger;
 
@@ -25,6 +24,7 @@ public class ManagementServer implements Runnable {
     public void run() {
         Thread.currentThread().setName("ManagementServer");
         Logger.network("Management connection server is running on port " + MANAGEMENT_CONNECTION_PORT + "...");
+
         while (true) {
             try {
                 Socket clientSocket = serverSocket.accept();

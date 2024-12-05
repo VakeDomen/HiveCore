@@ -8,7 +8,7 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 
-public class ClientConnectionManager extends Thread {
+public class ClientConnectionManager implements Runnable {
 
     private final Socket clientSocket;
 
