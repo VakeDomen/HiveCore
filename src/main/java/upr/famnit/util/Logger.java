@@ -32,7 +32,7 @@ public class Logger {
             case info -> logMessage = INFO + "[" + timestamp + "][" + threadName + "] Info: " + RESET + msg;
             case network -> logMessage = NETWORK + "[" + timestamp + "][" + threadName + "] Network: " + RESET + msg;
             case status -> logMessage = STATUS + "[" + timestamp + "][" + threadName + "] Status: " + RESET + msg;
-            case success -> logMessage = SUCCESS + "[" + timestamp + "][" + threadName + "] Misc: " + RESET + msg;
+            case success -> logMessage = SUCCESS + "[" + timestamp + "][" + threadName + "] Success: " + RESET + msg;
             default -> logMessage = WHITE + "[" + timestamp + "][" + threadName + "] " + msg + RESET;
         }
 
