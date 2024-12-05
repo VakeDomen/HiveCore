@@ -39,16 +39,38 @@ public class NodeConnectionManager extends Thread {
         }
 
         while (connection.isFine()) {
+            Request request = null;
+
             try {
-                handleRequest(connection.waitForRequest());
+                request = connection.waitForRequest();
             } catch (IOException e) {
-                handleRequestException(e);
+                handleRequestException(request, e);
+            }
+
+            try {
+                handleRequest(request);
+            } catch (IOException e) {
+                handleHandlingException(request, e);
             }
         }
         Logger.network("Worker thread closing.");
     }
 
-    private void handleRequestException(IOException e) {
+    private void handleHandlingException(Request request, IOException e) {
+        data.incrementExceptionCount();
+        Logger.error("Problem handling request from worker node. Count: " +
+                data.getConnectionExceptionCount() +
+                "\nError: " +
+                e.getMessage()
+        );
+
+        if (data.getConnectionExceptionCount() >= CONNECTION_EXCEPTION_THRESHOLD) {
+            Logger.warn("Too many exceptions. Closing connection.");
+            connection.close();
+        }
+    }
+
+    private void handleRequestException(Request request, IOException e) {
         data.incrementExceptionCount();
         Logger.error("Problem receiving request from worker node. Count: " +
                 data.getConnectionExceptionCount() +
@@ -138,21 +160,23 @@ public class NodeConnectionManager extends Thread {
             Logger.success("Request handled by: " +
                     data.getNodeName() +
                     "\nRequest time in que: " +
-                    clientRequest.queTime() +
-                    "\nRequest proxy time: " +
-                    clientRequest.proxyTime() +
-                    "\nTotal time: " +
-                    clientRequest.totalTime()
+                    String.format("%,d", clientRequest.queTime()) +
+                    "ms\nRequest proxy time: " +
+                    String.format("%,d", clientRequest.proxyTime()) +
+                    "ms\nTotal time: " +
+                    String.format("%,d", clientRequest.totalTime()) +
+                    "ms"
             );
         } catch (IOException e) {
             Logger.error("Proxying request failed: " +
                     e.getMessage() +
                     "\nRequest time in que: " +
-                    clientRequest.queTime() +
-                    "\nRequest proxy time: " +
-                    clientRequest.proxyTime() +
-                    "\nTotal time: " +
-                    clientRequest.totalTime()
+                    String.format("%,d", clientRequest.queTime()) +
+                    "ms\nRequest proxy time: " +
+                    String.format("%,d", clientRequest.proxyTime()) +
+                    "ms\nTotal time: " +
+                    String.format("%,d", clientRequest.totalTime()) +
+                    "ms"
             );
             StreamUtil.sendResponse(
                 clientRequest.getClientSocket().getOutputStream(),

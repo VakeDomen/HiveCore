@@ -11,7 +11,7 @@ import java.util.concurrent.Executors;
 
 import static upr.famnit.util.Config.NODE_CONNECTION_PORT;
 
-public class NodeServer implements Runnable {
+public class NodeServer extends Thread {
     private final ExecutorService workerPool;
     private final ServerSocket serverSocket;
     private final NodeConnectionMonitor monitor;

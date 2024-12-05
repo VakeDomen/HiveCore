@@ -11,7 +11,7 @@ import java.util.concurrent.Executors;
 
 import static upr.famnit.util.Config.MANAGEMENT_CONNECTION_PORT;
 
-public class ManagementServer implements Runnable {
+public class ManagementServer extends Thread {
     private final ServerSocket serverSocket;
     private final ExecutorService executorService;
 

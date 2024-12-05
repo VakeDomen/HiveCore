@@ -6,6 +6,7 @@ import upr.famnit.util.StreamUtil;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -56,7 +57,6 @@ public class Request {
 
         // Read the request headers
         this.headers = StreamUtil.readHeaders(clientInputStream);
-        Logger.info("Request Headers: " + headers);
         if (headers.containsKey("content-length")) {
             int contentLength = Integer.parseInt(headers.get("content-length"));
             this.body = StreamUtil.readRequestBody(clientInputStream, contentLength);
@@ -83,6 +83,19 @@ public class Request {
 
     public byte[] getBody() {
         return body;
+    }
+
+    public void log() {
+        Logger.info(method
+                + " "
+                + uri
+                + " "
+                + protocol
+                + "\n"
+                + headers
+                + "\n"
+                + new String(body, StandardCharsets.UTF_8)
+        );
     }
 
 }

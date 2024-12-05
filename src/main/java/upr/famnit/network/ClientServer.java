@@ -10,7 +10,7 @@ import java.util.concurrent.Executors;
 
 import static upr.famnit.util.Config.PROXY_PORT;
 
-public class ClientServer implements Runnable {
+public class ClientServer extends Thread {
     private final ExecutorService requestThreadExecutor;
     private final ServerSocket serverSocket;
 

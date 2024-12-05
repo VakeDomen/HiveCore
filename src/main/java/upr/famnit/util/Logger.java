@@ -21,7 +21,7 @@ public class Logger {
     private static final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     // Method to log messages with different log levels, including colored thread names and timestamp
-    public static void log1(String msg, LogLevel type) {
+    public static void log(String msg, LogLevel type) {
         String threadName = Thread.currentThread().getName();
         String timestamp = dateFormat.format(new Date());
         String logMessage;
@@ -39,28 +39,27 @@ public class Logger {
         System.out.println(logMessage);
     }
 
-    // Default log method that uses LogLevel.INFO
-//    public static void log(String msg) {
-//        log(msg, null);
-//    }
+    public static void log(String msg) {
+        log(msg, null);
+    }
 
     public static void warn(String msg) {
-        log1(msg, LogLevel.warn);
+        log(msg, LogLevel.warn);
     }
     public static void error(String msg) {
-        log1(msg, LogLevel.error);
+        log(msg, LogLevel.error);
     }
     public static void info(String msg) {
-        log1(msg, LogLevel.info);
+        log(msg, LogLevel.info);
     }
     public static void network(String msg) {
-        log1(msg, LogLevel.network);
+        log(msg, LogLevel.network);
     }
     public static void status(String msg) {
-        log1(msg, LogLevel.status);
+        log(msg, LogLevel.status);
     }
     public static void success(String msg) {
-        log1(msg, LogLevel.success);
+        log(msg, LogLevel.success);
     }
 
 }

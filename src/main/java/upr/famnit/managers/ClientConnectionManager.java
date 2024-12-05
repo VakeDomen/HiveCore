@@ -44,6 +44,7 @@ public class ClientConnectionManager implements Runnable {
             } catch (IOException e) {
                 Logger.error("Unable to close connection to the client: " + e.getMessage());
             }
+            cr.getRequest().log();
         }
     }
 }

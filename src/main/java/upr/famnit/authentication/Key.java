@@ -23,8 +23,6 @@ public class Key {
         this.role = RoleUtil.fromString(role);
     }
 
-
-
     public int getId() {
         return id;
     }

@@ -17,21 +17,19 @@ public class Main {
             DatabaseManager.createKeysTable();
 
             NodeServer nodeServer = new NodeServer();
-            Thread nodeServerThread = new Thread(nodeServer);
-
             ClientServer clientServer = new ClientServer();
-            Thread clientServerThread = new Thread(clientServer);
-
             ManagementServer managementServer = new ManagementServer();
-            Thread managementServerThread = new Thread(managementServer);
 
-            nodeServerThread.start();
-            clientServerThread.start();
-            managementServerThread.start();
+            nodeServer.start();
+            clientServer.start();
+            managementServer.start();
 
-            nodeServerThread.join();
-            clientServerThread.join();
-            managementServerThread.join();
+
+
+
+            nodeServer.join();
+            clientServer.join();
+            managementServer.join();
 
         } catch (IOException | SQLException | InterruptedException e) {
             Logger.error("An error occurred in the main thread: " + e.getMessage());
