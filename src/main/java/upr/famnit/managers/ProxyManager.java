@@ -32,7 +32,7 @@ public class ProxyManager implements Runnable {
         try {
             clientRequest = new ClientRequest(clientSocket);
         } catch (IOException e) {
-            Logger.log("Error reading management request: " + e.getMessage(), LogLevel.error);
+            Logger.error("Error reading management request: " + e.getMessage());
             return;
         }
 
@@ -51,11 +51,11 @@ public class ProxyManager implements Runnable {
             }
 
         } catch (IOException e) {
-            Logger.log("Error handling proxy management request: " + e.getMessage(), LogLevel.error);
+            Logger.error("Error handling proxy management request: " + e.getMessage());
             throw new RuntimeException(e);
 
         }
-        Logger.log("Management request finished");
+        Logger.success("Management request finished");
     }
 
     private void handleQueueRoute() throws IOException {
@@ -103,7 +103,7 @@ public class ProxyManager implements Runnable {
         try {
             DatabaseManager.insertKey(validKey);
         } catch (SQLException e) {
-            Logger.log("Something went wrong generating new key: " + e.getMessage(), LogLevel.error);
+            Logger.error("Something went wrong generating new key: " + e.getMessage());
             respond(ResponseFactory.BadRequest());
         }
 
@@ -115,7 +115,7 @@ public class ProxyManager implements Runnable {
         try {
              keys = DatabaseManager.getAllKeys();
         } catch (SQLException e) {
-            Logger.log("Something went wrong fetching keys: " + e.getMessage(), LogLevel.error);
+            Logger.error("Something went wrong fetching keys: " + e.getMessage());
             respond(ResponseFactory.BadRequest());
         }
 
@@ -150,7 +150,6 @@ public class ProxyManager implements Runnable {
     }
 
     private void respond(Response response) throws IOException {
-        Logger.log("Responding with: " + response.getCode() + " " + response.getText());
         StreamUtil.sendResponse(clientRequest.getClientSocket().getOutputStream(), response);
     }
 }

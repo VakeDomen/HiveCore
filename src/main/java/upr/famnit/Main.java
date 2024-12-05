@@ -34,7 +34,7 @@ public class Main {
             managementServerThread.join();
 
         } catch (IOException | SQLException | InterruptedException e) {
-            Logger.log("An error occurred in the main thread: " + e.getMessage(), LogLevel.error);
+            Logger.error("An error occurred in the main thread: " + e.getMessage());
             e.printStackTrace();
         }
     }

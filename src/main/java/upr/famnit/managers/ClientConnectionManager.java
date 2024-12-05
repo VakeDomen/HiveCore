@@ -18,31 +18,31 @@ public class ClientConnectionManager extends Thread {
 
     @Override
     public void run() {
-        Logger.log("Client connected: " + clientSocket.getRemoteSocketAddress(), LogLevel.network);
+        Logger.network("Client connected: " + clientSocket.getRemoteSocketAddress());
         ClientRequest cr = null;
         try {
             cr = new ClientRequest(clientSocket);
         } catch (IOException e) {
-            Logger.log("Failed reading client request: " + e.getMessage(), LogLevel.error);
+            Logger.error("Failed reading client request: " + e.getMessage());
         }
 
         if (cr == null) {
-            Logger.log("Not adding the request to the que. Communication stopped. ", LogLevel.error);
+            Logger.error("Not adding the request to the que. Stopping communication. ");
             return;
         }
 
         if (!RequestQue.addTask(cr)) {
-            Logger.log("Closing request due to invalid structure.", LogLevel.error);
+            Logger.error("Closing request due to invalid structure.");
             Response failedResponse = ResponseFactory.MethodNotAllowed();
             try {
                 StreamUtil.sendResponse(cr.getClientSocket().getOutputStream(), failedResponse);
             } catch (IOException e) {
-                Logger.log("Unable to respond to the client: " + e.getMessage(), LogLevel.error);
+                Logger.error("Unable to respond to the client: " + e.getMessage());
             }
             try {
                 cr.getClientSocket().close();
             } catch (IOException e) {
-                Logger.log("Unable to close connection to the client: " + e.getMessage(), LogLevel.error);
+                Logger.error("Unable to close connection to the client: " + e.getMessage());
             }
         }
     }

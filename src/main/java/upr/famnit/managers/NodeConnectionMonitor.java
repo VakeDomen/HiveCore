@@ -25,7 +25,7 @@ public class NodeConnectionMonitor extends Thread {
     @Override
     public void run() {
         Thread.currentThread().setName("Monitor");
-        Logger.log("Monitor starting...", LogLevel.status);
+        Logger.status("Monitor starting...");
         while (monitoring) {
             synchronized (nodeLock) {
                 checkOnWorkers();
@@ -37,7 +37,9 @@ public class NodeConnectionMonitor extends Thread {
                 throw new RuntimeException(e);
             }
         }
-        Logger.log("Monitor stopped.", LogLevel.status);
+
+
+        Logger.status("Monitor stopped.");
     }
 
     private void checkOnWorkers() {
@@ -49,7 +51,7 @@ public class NodeConnectionMonitor extends Thread {
             // stop connection if violated any rules
             if (status != NodeStatus.Valid) {
                 try {
-                    Logger.log("Closing node connection (" + node.getName() + ") due to: " + status, LogLevel.warn);
+                    Logger.warn("Closing node connection (" + node.getName() + ") due to: " + status);
                     node.closeConnection();
                 } catch (IOException e) {
                     throw new RuntimeException(e);
@@ -114,7 +116,7 @@ public class NodeConnectionMonitor extends Thread {
 
     public void addNode(NodeConnectionManager manager) {
         synchronized (nodeLock) {
-            this.nodes.add(manager);
+            nodes.add(manager);
         }
     }
 
@@ -125,8 +127,38 @@ public class NodeConnectionMonitor extends Thread {
     public static HashMap<String, Integer> getActiveConnections() {
         HashMap<String, Integer> connectedNodes = new HashMap<>();
         for (NodeConnectionManager node : nodes) {
-            connectedNodes.putIfAbsent(node.getNodeName(), 0);
-            connectedNodes.put(node.getNodeName(), connectedNodes.get(node.getNodeName()) + 1);
+            String name = node.getNodeName();
+            if (name == null) {
+                name = "Unauthenticated";
+            }
+            connectedNodes.putIfAbsent(name, 0);
+            connectedNodes.put(name, connectedNodes.get(name) + 1);
+        }
+        return connectedNodes;
+    }
+
+    public static HashMap<String, ArrayList<VerificationStatus>> getConnectionsStatus() {
+        HashMap<String, ArrayList<VerificationStatus>> connectedNodes = new HashMap<>();
+        for (NodeConnectionManager node : nodes) {
+            String name = node.getNodeName();
+            if (name == null) {
+                name = "Unauthenticated";
+            }
+            connectedNodes.putIfAbsent(name, new ArrayList<>());
+            connectedNodes.get(name).add(node.getVerificationStatus());
+        }
+        return connectedNodes;
+    }
+
+    public static HashMap<String, ArrayList<LocalDateTime>> getLastPings() {
+        HashMap<String, ArrayList<LocalDateTime>> connectedNodes = new HashMap<>();
+        for (NodeConnectionManager node : nodes) {
+            String name = node.getNodeName();
+            if (name == null) {
+                name = "Unauthenticated";
+            }
+            connectedNodes.putIfAbsent(name, new ArrayList<>());
+            connectedNodes.get(node.getNodeName()).add(node.getLastPing());
         }
         return connectedNodes;
     }

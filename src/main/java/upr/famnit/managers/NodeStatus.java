@@ -4,5 +4,6 @@ public enum NodeStatus {
     Valid,
     InvalidNonce,
     Rejected,
-    Timeout, Closed,
+    Timeout,
+    Closed,
 }

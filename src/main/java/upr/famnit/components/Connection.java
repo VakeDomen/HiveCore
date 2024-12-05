@@ -108,7 +108,6 @@ public class Connection {
             }
 
             clientRequest.stampResponseFinish();
-            //Logger.log("Finished forwarding response to client.", LogLevel.network);
         }
 
     }

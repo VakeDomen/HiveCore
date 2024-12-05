@@ -22,23 +22,23 @@ public class NodeServer implements Runnable {
     public void run() {
         Thread.currentThread().setName("WorkerServer");
         this.monitor.start();
-        try {
-            Logger.log("Worker connection server is running on port " + NODE_CONNECTION_PORT + "...", LogLevel.network);
-            while (true) {
+        while (true) {
+            try {
+                Logger.network("Worker connection server is running on port " + NODE_CONNECTION_PORT + "...");
                 NodeConnectionManager nodeConnection = new NodeConnectionManager(serverSocket);
                 nodeConnection.start();
                 this.monitor.addNode(nodeConnection);
-            }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        } finally {
-            try {
-                Logger.log("Waiting for monitor to stop...", LogLevel.status);
-                this.monitor.stopMonitoring();
-                this.monitor.join();
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
+            } catch (IOException e) {
+                Logger.error("Something went wrong accepting worker connection: " + e.getMessage());
             }
         }
+
+//        try {
+//            Logger.status("Waiting for monitor to stop...");
+//            this.monitor.stopMonitoring();
+//            this.monitor.join();
+//        } catch (InterruptedException e) {
+//            throw new RuntimeException(e);
+//        }
     }
 }

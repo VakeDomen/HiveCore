@@ -28,12 +28,12 @@ public class KeyUtil {
         try {
             fethcedKey = DatabaseManager.getKeyByValue(key);
         } catch (SQLException e) {
-            Logger.log("Failed fetching key from database: " + key, LogLevel.error);
+            Logger.error("Failed fetching key from database: " + key);
             return Role.Unknown;
         }
 
         if (fethcedKey == null) {
-            Logger.log("Can't find key in database: " + key, LogLevel.error);
+            Logger.error("Can't find key in database: " + key);
             return Role.Unknown;
         }
 
@@ -45,12 +45,12 @@ public class KeyUtil {
         try {
             fethcedKey = DatabaseManager.getKeyByValue(key);
         } catch (SQLException e) {
-            Logger.log("Failed fetching key from database: " + key, LogLevel.error);
+            Logger.error("Failed fetching key from database: " + key);
             return false;
         }
 
         if (fethcedKey == null) {
-            Logger.log("Can't find key in database: " + key, LogLevel.error);
+            Logger.error("Can't find key in database: " + key);
             return false;
         }
 

@@ -29,7 +29,7 @@ public class DatabaseManager {
 
         try (Connection conn = connect(); Statement statement = conn.createStatement()) {
             statement.execute(sql);
-            Logger.log("Keys table created or already exists.");
+            Logger.info("Keys table created or already exists.");
         }
     }
 
@@ -40,7 +40,7 @@ public class DatabaseManager {
             stmt.setString(2, key.getValue());
             stmt.setString(3, key.getRole().toString());
             stmt.executeUpdate();
-            Logger.log("Key inserted successfully.");
+            Logger.success("Key inserted successfully.");
         }
     }
 

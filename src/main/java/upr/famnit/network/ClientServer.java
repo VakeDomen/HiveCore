@@ -20,14 +20,14 @@ public class ClientServer implements Runnable {
     @Override
     public void run() {
         Thread.currentThread().setName("ClientServer");
-        try {
-            Logger.log("Proxy server is running on port " + PROXY_PORT + "...", LogLevel.network);
-            while (true) {
+        while (true) {
+            try {
+                Logger.network("Proxy server is running on port " + PROXY_PORT + "...");
                 ClientConnectionManager connection = new ClientConnectionManager(serverSocket);
                 connection.start();
+            } catch (IOException e) {
+                Logger.error("Something went wrong accepting client connection: " + e.getMessage());
             }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
         }
     }
 }

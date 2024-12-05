@@ -24,15 +24,14 @@ public class ManagementServer implements Runnable {
     @Override
     public void run() {
         Thread.currentThread().setName("ManagementServer");
-        try {
-            Logger.log("Management connection server is running on port " + MANAGEMENT_CONNECTION_PORT + "...", LogLevel.network);
-            while (true) {
+        Logger.network("Management connection server is running on port " + MANAGEMENT_CONNECTION_PORT + "...");
+        while (true) {
+            try {
                 Socket clientSocket = serverSocket.accept();
-                Logger.log("Management request received: ", LogLevel.network);
                 executorService.execute(new ProxyManager(clientSocket));
+            } catch (IOException e) {
+                Logger.error("Something went wrong accepting management connection: " + e.getMessage());
             }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
         }
     }
 }

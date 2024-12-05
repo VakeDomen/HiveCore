@@ -6,5 +6,5 @@ public enum LogLevel {
     info,
     network,
     status,
-    misc,
+    success,
 }

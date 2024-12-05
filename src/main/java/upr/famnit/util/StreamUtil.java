@@ -194,7 +194,6 @@ public class StreamUtil {
      * @throws IOException If an I/O error occurs.
      */
     public static void readAndForwardChunkedBody(InputStream in, OutputStream out) throws IOException {
-        Logger.log("Receiving chunked response...", LogLevel.network);
         while (true) {
             // Read the chunk size line
             String chunkSizeLine = StreamUtil.readLine(in);
@@ -213,11 +212,9 @@ public class StreamUtil {
 
             if (chunkSize == 0) {
                 // End of chunks
-                Logger.log("End of chunked response.", LogLevel.network);
                 // Read and forward any trailing headers
                 String line;
                 while ((line = StreamUtil.readLine(in)) != null && !line.isEmpty()) {
-                    Logger.log("Trailing header: " + line, LogLevel.network);
                     out.write((line + "\r\n").getBytes(StandardCharsets.US_ASCII));
                 }
                 out.write("\r\n".getBytes(StandardCharsets.US_ASCII));
@@ -250,7 +247,6 @@ public class StreamUtil {
      * @throws IOException If an I/O error occurs.
      */
     public static void readAndForwardFixedLengthBody(InputStream in, OutputStream out, int contentLength) throws IOException {
-        Logger.log("Receiving fixed length response...", LogLevel.network);
         byte[] buffer = new byte[MESSAGE_CHUNK_BUFFER_SIZE];
         int totalBytesRead = 0;
         int bytesRead;
@@ -274,7 +270,6 @@ public class StreamUtil {
      * @throws IOException If an I/O error occurs.
      */
     public static void readAndForwardUntilEOF(InputStream in, OutputStream out) throws IOException {
-        Logger.log("Receiving unknown length response...", LogLevel.network);
         byte[] buffer = new byte[MESSAGE_CHUNK_BUFFER_SIZE];
         int bytesRead;
         while ((bytesRead = in.read(buffer)) != -1) {

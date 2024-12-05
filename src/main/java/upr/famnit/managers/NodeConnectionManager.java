@@ -26,16 +26,16 @@ public class NodeConnectionManager extends Thread {
         Socket socket = nodeServerSocket.accept();
         connection = new Connection(socket);
         data = new NodeData();
-        Logger.log("Worker node connected: " + connection.getInetAddress() , LogLevel.network);
+        Logger.network("Worker node connected: " + connection.getInetAddress());
     }
 
     @Override
     public void run() {
-        Logger.log("Worker thread started.", LogLevel.status);
+        Logger.network("Waiting for worker to authenticate...");
         try {
             authenticateNode();
         } catch (IOException e) {
-            Logger.log("Error authenticating worker node: " + e.getMessage(), LogLevel.error);
+            Logger.error("Error authenticating worker node: " + e.getMessage());
         }
 
         while (connection.isFine()) {
@@ -45,20 +45,19 @@ public class NodeConnectionManager extends Thread {
                 handleRequestException(e);
             }
         }
-        Logger.log("Worker thread closing.", LogLevel.status);
+        Logger.network("Worker thread closing.");
     }
 
     private void handleRequestException(IOException e) {
         data.incrementExceptionCount();
-        Logger.log("Problem receiving request from worker node. Count: " +
+        Logger.error("Problem receiving request from worker node. Count: " +
                 data.getConnectionExceptionCount() +
                 "\nError: " +
-                e.getMessage(),
-                LogLevel.error
+                e.getMessage()
         );
 
         if (data.getConnectionExceptionCount() >= CONNECTION_EXCEPTION_THRESHOLD) {
-            Logger.log("Too many exceptions. Closing connection.", LogLevel.warn);
+            Logger.warn("Too many exceptions. Closing connection.");
             connection.close();
         }
     }
@@ -66,11 +65,11 @@ public class NodeConnectionManager extends Thread {
     private void authenticateNode() throws IOException {
         try {
             waitForAuthRequestAndValidate();
-            Logger.log("Worker authenticated: " + data.getNodeName(), LogLevel.status);
+            Logger.status("Worker authenticated: " + data.getNodeName());
         } catch (IOException e) {
-            Logger.log("IOException when authenticating node: " + e.getMessage(), LogLevel.error);
+            Logger.error("IOException when authenticating node: " + e.getMessage());
         } catch (InterruptedException e) {
-            Logger.log("Authenticating node interrupted: " + e.getMessage(), LogLevel.error);
+            Logger.error("Authenticating node interrupted: " + e.getMessage());
         }
 
         if (data.getVerificationStatus() != VerificationStatus.Verified) {
@@ -133,20 +132,27 @@ public class NodeConnectionManager extends Thread {
             connection.send(RequestFactory.EmptyQueResponse());
             return;
         }
-        Logger.log("Pulled task. Task waited: " + (System.currentTimeMillis() - clientRequest.getQueEnterTime()) + "ms", LogLevel.status);
 
         try {
             connection.proxyRequestToNode(clientRequest);
+            Logger.success("Request handled by: " +
+                    data.getNodeName() +
+                    "\nRequest time in que: " +
+                    clientRequest.queTime() +
+                    "\nRequest proxy time: " +
+                    clientRequest.proxyTime() +
+                    "\nTotal time: " +
+                    clientRequest.totalTime()
+            );
         } catch (IOException e) {
-            Logger.log("Proxying request failed: " +
+            Logger.error("Proxying request failed: " +
                     e.getMessage() +
                     "\nRequest time in que: " +
                     clientRequest.queTime() +
                     "\nRequest proxy time: " +
                     clientRequest.proxyTime() +
                     "\nTotal time: " +
-                    clientRequest.totalTime(),
-                    LogLevel.error
+                    clientRequest.totalTime()
             );
             StreamUtil.sendResponse(
                 clientRequest.getClientSocket().getOutputStream(),

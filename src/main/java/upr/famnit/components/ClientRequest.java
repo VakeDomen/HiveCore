@@ -26,7 +26,6 @@ public class ClientRequest {
      */
     public ClientRequest(Socket clientSocket) throws IOException {
         this.clientSocket = clientSocket;
-        Logger.log("Parsing client request...");
         clientSocket.setSoTimeout(PROXY_TIMEOUT_MS);
         this.request = new Request(clientSocket);
     }
@@ -48,10 +47,6 @@ public class ClientRequest {
     }
     public void stampResponseFinish() {
         this.responseFinishTime = System.currentTimeMillis();
-    }
-
-    public long getQueEnterTime() {
-        return queEnterTime;
     }
 
     public long queTime() {

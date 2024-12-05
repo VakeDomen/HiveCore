@@ -49,28 +49,30 @@ public class RequestQue {
     private static boolean addToQueByModel(ClientRequest request) {
         request.stampQueueEnter();
         String modelName = StreamUtil.getValueFromJSONBody("model", request.getRequest().getBody());
-        Logger.log("Request for model: " + modelName);
 
         if (modelName == null) {
-            Logger.log("Unable to determine target model for request.", LogLevel.error);
+            Logger.warn("Unable to determine target model for request.");
             return false;
         }
 
         modelQue.computeIfAbsent(modelName, k -> new ConcurrentLinkedQueue<>()).add(request);
+
+        Logger.info("Request for model " + modelName + " added to the queue.");
         return true;
     }
 
     private static boolean addToQueByNode(ClientRequest request) {
         request.stampQueueEnter();
         String nodeName = request.getRequest().getHeaders().get("node");
-        Logger.log("Request for worker node: " + nodeName);
+
 
         if (nodeName == null) {
-            Logger.log("Unable to determine target node for request.", LogLevel.error);
+            Logger.warn("Unable to determine target node for request.");
             return false;
         }
 
         nodeQue.computeIfAbsent(nodeName, k -> new ConcurrentLinkedQueue<>()).add(request);
+        Logger.info("Request for worker node " + nodeName + " added to the queue.");
         return true;
     }
 
