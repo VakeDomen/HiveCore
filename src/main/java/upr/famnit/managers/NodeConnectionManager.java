@@ -13,6 +13,7 @@ import java.net.Socket;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import static upr.famnit.util.Config.CONNECTION_EXCEPTION_THRESHOLD;
 
@@ -228,6 +229,6 @@ public class NodeConnectionManager extends Thread {
         if (tagsString.isBlank()) {
             return new ArrayList<>();
         }
-        return (ArrayList<String>) Arrays.stream(tagsString.split(";")).toList();
+        return new ArrayList<>(List.of(tagsString.split(";")));
     }
 }

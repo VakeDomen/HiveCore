@@ -1,6 +1,7 @@
 package upr.famnit.managers;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import upr.famnit.authentication.*;
 import upr.famnit.components.*;
 import upr.famnit.util.Logger;
@@ -10,6 +11,7 @@ import java.io.IOException;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -125,7 +127,7 @@ public class ProxyManager implements Runnable {
     }
 
     private void handleActiveWorkersPingsRequest() throws IOException {
-        HashMap<String, ArrayList<LocalDateTime>> activeConnections = NodeConnectionMonitor.getLastPings();
+        HashMap<String, ArrayList<String>> activeConnections = NodeConnectionMonitor.getLastPings();
         Gson gson = new Gson();
         String body = gson.toJson(activeConnections);
         respond(ResponseFactory.Ok(body.getBytes(StandardCharsets.UTF_8)));

@@ -154,15 +154,15 @@ public class NodeConnectionMonitor extends Thread {
         return connectedNodes;
     }
 
-    public static HashMap<String, ArrayList<LocalDateTime>> getLastPings() {
-        HashMap<String, ArrayList<LocalDateTime>> connectedNodes = new HashMap<>();
+    public static HashMap<String, ArrayList<String>> getLastPings() {
+        HashMap<String, ArrayList<String>> connectedNodes = new HashMap<>();
         for (NodeConnectionManager node : nodes) {
             String name = node.getNodeName();
             if (name == null) {
                 name = "Unauthenticated";
             }
             connectedNodes.putIfAbsent(name, new ArrayList<>());
-            connectedNodes.get(node.getNodeName()).add(node.getLastPing());
+            connectedNodes.get(node.getNodeName()).add(node.getLastPing().toString());
         }
         return connectedNodes;
     }
