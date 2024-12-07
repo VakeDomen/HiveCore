@@ -11,6 +11,8 @@ import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Arrays;
 
 import static upr.famnit.util.Config.CONNECTION_EXCEPTION_THRESHOLD;
 
@@ -142,7 +144,9 @@ public class NodeConnectionManager extends Thread {
     private void handlePollRequest(Request request) throws IOException {
         handlePing(request);
 
+        data.tagsTestAndSet(request.getUri());
         String[] models = request.getUri().split(";");
+
         ClientRequest clientRequest = null;
         for (String model : models) {
             clientRequest = RequestQue.getTask(model, data.getNodeName());
@@ -211,5 +215,19 @@ public class NodeConnectionManager extends Thread {
 
     public void closeConnection() throws IOException {
         connection.close();
+    }
+
+    public ArrayList<String> getTags() {
+        String tagsString = data.getTags();
+        if (tagsString == null) {
+            return new ArrayList<>();
+        }
+        if (tagsString.equals("/")) {
+            return new ArrayList<>();
+        }
+        if (tagsString.isBlank()) {
+            return new ArrayList<>();
+        }
+        return (ArrayList<String>) Arrays.stream(tagsString.split(";")).toList();
     }
 }

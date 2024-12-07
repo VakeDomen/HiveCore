@@ -1,10 +1,7 @@
 package upr.famnit.managers;
 
 import com.google.gson.Gson;
-import upr.famnit.authentication.Key;
-import upr.famnit.authentication.KeyUtil;
-import upr.famnit.authentication.Role;
-import upr.famnit.authentication.SubmittedKey;
+import upr.famnit.authentication.*;
 import upr.famnit.components.*;
 import upr.famnit.util.Logger;
 import upr.famnit.util.StreamUtil;
@@ -13,9 +10,11 @@ import java.io.IOException;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 public class ProxyManager implements Runnable {
 
@@ -45,7 +44,10 @@ public class ProxyManager implements Runnable {
 
             switch (clientRequest.getRequest().getUri()) {
                 case "/key" -> handleKeyRoute();
-                case "/worker" -> handleWorkerRoute();
+                case "/worker/connections" -> handleWorkerConnectionsRoute();
+                case "/worker/status" -> handleWorkerStatusRoute();
+                case "/worker/pings" -> handleWorkerPingsRoute();
+                case "/worker/tags" -> handleWorkerTagsRoute();
                 case "/queue" -> handleQueueRoute();
                 case null, default -> respond(ResponseFactory.NotFound());
             }
@@ -73,9 +75,30 @@ public class ProxyManager implements Runnable {
         }
     }
 
-    private void handleWorkerRoute() throws IOException {
+    private void handleWorkerConnectionsRoute() throws IOException {
         switch (clientRequest.getRequest().getMethod()) {
-            case "GET" -> handleActiveWorkersRequest();
+            case "GET" -> handleActiveWorkersConnectionRequest();
+            case null, default -> respond(ResponseFactory.NotFound());
+        }
+    }
+
+    private void handleWorkerStatusRoute() throws IOException {
+        switch (clientRequest.getRequest().getMethod()) {
+            case "GET" -> handleActiveWorkersStatusRequest();
+            case null, default -> respond(ResponseFactory.NotFound());
+        }
+    }
+
+    private void handleWorkerPingsRoute() throws IOException {
+        switch (clientRequest.getRequest().getMethod()) {
+            case "GET" -> handleActiveWorkersPingsRequest();
+            case null, default -> respond(ResponseFactory.NotFound());
+        }
+    }
+
+    private void handleWorkerTagsRoute() throws IOException {
+        switch (clientRequest.getRequest().getMethod()) {
+            case "GET" -> handleActiveWorkersTagsRequest();
             case null, default -> respond(ResponseFactory.NotFound());
         }
     }
@@ -87,8 +110,29 @@ public class ProxyManager implements Runnable {
         respond(ResponseFactory.Ok(body.getBytes(StandardCharsets.UTF_8)));
     }
 
-    private void handleActiveWorkersRequest() throws IOException {
+    private void handleActiveWorkersConnectionRequest() throws IOException {
         HashMap<String, Integer> activeConnections = NodeConnectionMonitor.getActiveConnections();
+        Gson gson = new Gson();
+        String body = gson.toJson(activeConnections);
+        respond(ResponseFactory.Ok(body.getBytes(StandardCharsets.UTF_8)));
+    }
+
+    private void handleActiveWorkersStatusRequest() throws IOException {
+        HashMap<String, ArrayList<VerificationStatus>> activeConnections = NodeConnectionMonitor.getConnectionsStatus();
+        Gson gson = new Gson();
+        String body = gson.toJson(activeConnections);
+        respond(ResponseFactory.Ok(body.getBytes(StandardCharsets.UTF_8)));
+    }
+
+    private void handleActiveWorkersPingsRequest() throws IOException {
+        HashMap<String, ArrayList<LocalDateTime>> activeConnections = NodeConnectionMonitor.getLastPings();
+        Gson gson = new Gson();
+        String body = gson.toJson(activeConnections);
+        respond(ResponseFactory.Ok(body.getBytes(StandardCharsets.UTF_8)));
+    }
+
+    private void handleActiveWorkersTagsRequest() throws IOException {
+        HashMap<String, Set<String>> activeConnections = NodeConnectionMonitor.getTags();
         Gson gson = new Gson();
         String body = gson.toJson(activeConnections);
         respond(ResponseFactory.Ok(body.getBytes(StandardCharsets.UTF_8)));

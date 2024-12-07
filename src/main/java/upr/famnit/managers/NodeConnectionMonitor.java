@@ -9,6 +9,8 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 
 import upr.famnit.util.Config;
 
@@ -21,6 +23,8 @@ public class NodeConnectionMonitor extends Thread {
     public NodeConnectionMonitor() {
         nodes = new ArrayList<>();
     }
+
+
 
     @Override
     public void run() {
@@ -159,6 +163,19 @@ public class NodeConnectionMonitor extends Thread {
             }
             connectedNodes.putIfAbsent(name, new ArrayList<>());
             connectedNodes.get(node.getNodeName()).add(node.getLastPing());
+        }
+        return connectedNodes;
+    }
+
+    public static HashMap<String, Set<String>> getTags() {
+        HashMap<String, Set<String>> connectedNodes = new HashMap<>();
+        for (NodeConnectionManager node : nodes) {
+            String name = node.getNodeName();
+            if (name == null) {
+                name = "Unauthenticated";
+            }
+            connectedNodes.putIfAbsent(name, new HashSet<>());
+            connectedNodes.get(node.getNodeName()).addAll(node.getTags());
         }
         return connectedNodes;
     }

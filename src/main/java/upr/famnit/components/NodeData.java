@@ -18,6 +18,7 @@ public class NodeData {
     private String nodeName;
     private volatile VerificationStatus verificationStatus;
     private volatile String nonce;
+    private volatile String tags;
 
     public NodeData() {
         lastPing = LocalDateTime.now();
@@ -25,12 +26,24 @@ public class NodeData {
         nodeName = null;
         verificationStatus = VerificationStatus.SettingUp;
         nonce = null;
+        tags = null;
     }
 
     public void setLastPing(LocalDateTime lastPing) {
         statusWriteLock.lock();
         this.lastPing = lastPing;
         statusWriteLock.unlock();
+    }
+
+    public void tagsTestAndSet(String tags) {
+        statusReadLock.lock();
+        boolean same = tags.equals(this.tags);
+        statusReadLock.unlock();
+        if (!same) {
+            statusWriteLock.lock();
+            this.tags = tags;
+            statusWriteLock.unlock();
+        }
     }
 
     public void incrementExceptionCount() {
@@ -88,6 +101,13 @@ public class NodeData {
     public String getNonce() {
         statusReadLock.lock();
         String ret = nonce;
+        statusReadLock.unlock();
+        return ret;
+    }
+
+    public String getTags() {
+        statusReadLock.lock();
+        String ret = tags;
         statusReadLock.unlock();
         return ret;
     }
