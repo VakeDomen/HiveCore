@@ -18,31 +18,31 @@ public class ClientConnectionManager implements Runnable {
 
     @Override
     public void run() {
-        Logger.network("Client connected: " + clientSocket.getRemoteSocketAddress());
+        Logger.network("Client connected: " );
         ClientRequest cr = null;
         try {
             cr = new ClientRequest(clientSocket);
         } catch (IOException e) {
-            Logger.error("Failed reading client request: " + e.getMessage());
+            Logger.error("Failed reading client request(" + clientSocket.getRemoteSocketAddress() + "): " + e.getMessage());
         }
 
         if (cr == null) {
-            Logger.error("Not adding the request to the que. Stopping communication. ");
+            Logger.error("Not adding the request to the que. Stopping communication. (" + clientSocket.getRemoteSocketAddress() + ")");
             return;
         }
 
         if (!RequestQue.addTask(cr)) {
-            Logger.error("Closing request due to invalid structure.");
+            Logger.error("Closing request due to invalid structure.(" + clientSocket.getRemoteSocketAddress() + ")");
             Response failedResponse = ResponseFactory.MethodNotAllowed();
             try {
                 StreamUtil.sendResponse(cr.getClientSocket().getOutputStream(), failedResponse);
             } catch (IOException e) {
-                Logger.error("Unable to respond to the client: " + e.getMessage());
+                Logger.error("Unable to respond to the client: (" + clientSocket.getRemoteSocketAddress() + ")" + e.getMessage());
             }
             try {
                 cr.getClientSocket().close();
             } catch (IOException e) {
-                Logger.error("Unable to close connection to the client: " + e.getMessage());
+                Logger.error("Unable to close connection to the client(" + clientSocket.getRemoteSocketAddress() + "): " + e.getMessage());
             }
             cr.getRequest().log();
         }

@@ -57,7 +57,7 @@ public class RequestQue {
 
         modelQue.computeIfAbsent(modelName, k -> new ConcurrentLinkedQueue<>()).add(request);
 
-        Logger.info("Request for model " + modelName + " added to the queue.");
+        Logger.info("Request for model " + modelName + " added to the queue. (" + request.getClientSocket().getRemoteSocketAddress() + ")");
         return true;
     }
 
@@ -72,7 +72,7 @@ public class RequestQue {
         }
 
         nodeQue.computeIfAbsent(nodeName, k -> new ConcurrentLinkedQueue<>()).add(request);
-        Logger.info("Request for worker node " + nodeName + " added to the queue.");
+        Logger.info("Request for worker node " + nodeName + " added to the queue. (" + request.getClientSocket().getRemoteSocketAddress() + ")");
         return true;
     }
 
