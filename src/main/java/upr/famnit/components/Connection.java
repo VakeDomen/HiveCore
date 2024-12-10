@@ -48,7 +48,7 @@ public class Connection {
         }
     }
 
-    public void close() {
+    public boolean close() {
         synchronized (socketLock) {
             synchronized (stateLock) {
                 try {
@@ -56,8 +56,9 @@ public class Connection {
                     streamFromNode.close();
                     streamToNode.close();
                     nodeSocket.close();
+                    return true;
                 } catch (IOException e) {
-                    throw new RuntimeException(e);
+                    return false;
                 }
             }
         }
@@ -81,7 +82,11 @@ public class Connection {
             if (statusLine == null || statusLine.isEmpty()) {
                 throw new IOException("Failed to read status line from node");
             }
-            //Logger.log("Status Line: " + statusLine, LogLevel.info);
+            String[] statusLineTokens = statusLine.split(" ", 3);
+            if (statusLineTokens.length == 3 && !statusLineTokens[1].equals("200")) {
+                Logger.warn("Response not 200: " + statusLine);
+                clientRequest.getRequest().log();
+            }
             streamToClient.write((statusLine + "\r\n").getBytes(StandardCharsets.US_ASCII));
 
             // Read the response headers

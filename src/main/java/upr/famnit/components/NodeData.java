@@ -52,6 +52,18 @@ public class NodeData {
         statusWriteLock.unlock();
     }
 
+    public void resetExceptionCount() {
+        statusReadLock.lock();
+        boolean shouldChange = connectionExceptionCount != 0;
+        statusReadLock.unlock();
+        if (!shouldChange) {
+            return;
+        }
+        statusWriteLock.lock();
+        this.connectionExceptionCount = 0;
+        statusWriteLock.unlock();
+    }
+
     public void setNodeName(String nodeName) {
         statusWriteLock.lock();
         this.nodeName = nodeName;
@@ -111,4 +123,6 @@ public class NodeData {
         statusReadLock.unlock();
         return ret;
     }
+
+
 }

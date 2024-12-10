@@ -18,7 +18,6 @@ public class ClientConnectionManager implements Runnable {
 
     @Override
     public void run() {
-        Logger.network("Client connected: " );
         ClientRequest cr = null;
         try {
             cr = new ClientRequest(clientSocket);

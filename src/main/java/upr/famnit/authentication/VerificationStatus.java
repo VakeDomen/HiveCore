@@ -4,5 +4,9 @@ public enum VerificationStatus {
     SettingUp,
     Waiting,
     Verified,
-    Rejected
+    Rejected,
+    Closed,
+    Polling,
+    Working,
+    CompletedWork,
 }

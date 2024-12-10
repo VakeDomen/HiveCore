@@ -41,17 +41,19 @@ public class NodeConnectionManager extends Thread {
             Logger.error("Error authenticating worker node: " + e.getMessage());
         }
 
-        while (connection.isFine()) {
+        while (isConnectionOpen()) {
             Request request = null;
 
             try {
                 request = connection.waitForRequest();
             } catch (IOException e) {
                 handleRequestException(request, e);
+                continue;
             }
 
             try {
                 handleRequest(request);
+                data.resetExceptionCount();
             } catch (IOException e) {
                 handleHandlingException(request, e);
             }
@@ -60,17 +62,11 @@ public class NodeConnectionManager extends Thread {
     }
 
     private void handleHandlingException(Request request, IOException e) {
-        data.incrementExceptionCount();
         Logger.error("Problem handling request from worker node. Count: " +
                 data.getConnectionExceptionCount() +
                 "\nError: " +
                 e.getMessage()
         );
-
-        if (data.getConnectionExceptionCount() >= CONNECTION_EXCEPTION_THRESHOLD) {
-            Logger.warn("Too many exceptions. Closing connection.");
-            connection.close();
-        }
     }
 
     private void handleRequestException(Request request, IOException e) {
@@ -83,7 +79,7 @@ public class NodeConnectionManager extends Thread {
 
         if (data.getConnectionExceptionCount() >= CONNECTION_EXCEPTION_THRESHOLD) {
             Logger.warn("Too many exceptions. Closing connection.");
-            connection.close();
+            closeConnection();
         }
     }
 
@@ -98,7 +94,7 @@ public class NodeConnectionManager extends Thread {
         }
 
         if (data.getVerificationStatus() != VerificationStatus.Verified) {
-            connection.close();
+            closeConnection();
             return;
         }
 
@@ -143,23 +139,16 @@ public class NodeConnectionManager extends Thread {
     }
 
     private void handlePollRequest(Request request) throws IOException {
+        data.setVerificationStatus(VerificationStatus.Polling);
         handlePing(request);
 
-        data.tagsTestAndSet(request.getUri());
-        String[] models = request.getUri().split(";");
-
-        ClientRequest clientRequest = null;
-        for (String model : models) {
-            clientRequest = RequestQue.getTask(model, data.getNodeName());
-            if (clientRequest != null) {
-                break;
-            }
-        }
+        ClientRequest clientRequest = getRequestFromQueue(request);
         if (clientRequest == null) {
             connection.send(RequestFactory.EmptyQueResponse());
             return;
         }
 
+        data.setVerificationStatus(VerificationStatus.Working);
         try {
             connection.proxyRequestToNode(clientRequest);
             Logger.success("Request handled by: " +
@@ -188,6 +177,70 @@ public class NodeConnectionManager extends Thread {
                 ResponseFactory.BadRequest()
             );
         }
+        data.setVerificationStatus(VerificationStatus.CompletedWork);
+    }
+
+    private ClientRequest getRequestFromQueue(Request request) {
+        ClientRequest work = null;
+
+        // dynamic mode for optimized sequencing of model requests
+        // if target is set to "-" we assume the worker has already posted the
+        // models available in the tags.
+        // The sequence of models in the tags is changed such that the model that
+        // was found is the next line for the next request if "-" is used again.
+        // meant to lower the amount of model-swaps in the VRAM of the worker nodes
+        // [A, B, C, D, E]
+        //        ^ i=2
+        // index = index - i % len
+        //      ˘ ˘
+        // [C, D, E, A ,B]
+        if (request.getUri().equals("-")) {
+            work = sequencedPolling(request);
+        } else {
+            work = defaultPolling(request);
+        }
+
+        return work;
+    }
+
+    private ClientRequest defaultPolling(Request request) {
+        data.tagsTestAndSet(request.getUri());
+        String[] models = request.getUri().split(";");
+
+        for (String model : models) {
+            ClientRequest clientRequest = RequestQue.getTask(model, data.getNodeName());
+            if (clientRequest != null) {
+                return clientRequest;
+            }
+        }
+        return null;
+    }
+
+    private ClientRequest sequencedPolling(Request request) {
+        String tagsString = data.getTags();
+        if (tagsString == null) {
+            return null;
+        }
+
+        String[] tags = tagsString.split(";");
+        if (tags.length == 0) {
+            return null;
+        }
+
+        for (int i = 0; i < tags.length ; i++) {
+            ClientRequest clientRequest = RequestQue.getTask(tags[i], data.getNodeName());
+            if (clientRequest != null) {
+                String[] newTags = new String[tags.length];
+                if (i > 0) {
+                    for (int j = 0 ; j < tags.length ; j++) {
+                        newTags[(j - i) % tags.length] = tags[j];
+                    }
+                    data.tagsTestAndSet(String.join(";", newTags));
+                }
+                return clientRequest;
+            }
+        }
+        return null;
     }
 
     public LocalDateTime getLastPing() {
@@ -211,12 +264,16 @@ public class NodeConnectionManager extends Thread {
     }
 
     public boolean isConnectionOpen() {
-        return connection.isFine();
+        return data.getVerificationStatus() != VerificationStatus.Closed && connection.isFine();
     }
 
-    public void closeConnection() throws IOException {
-        connection.close();
+    public void closeConnection() {
+        if (connection.close()) {
+            data.setVerificationStatus(VerificationStatus.Closed);
+        }
     }
+
+
 
     public ArrayList<String> getTags() {
         String tagsString = data.getTags();

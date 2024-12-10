@@ -54,12 +54,8 @@ public class NodeConnectionMonitor extends Thread {
 
             // stop connection if violated any rules
             if (status != NodeStatus.Valid) {
-                try {
-                    Logger.warn("Closing node connection (" + node.getName() + ") due to: " + status);
-                    node.closeConnection();
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
+                node.closeConnection();
+                Logger.warn("Closing node connection (" + node.getNodeName() + ") due to: " + status);
                 toRemove.add(node);
             }
         }
@@ -89,8 +85,22 @@ public class NodeConnectionMonitor extends Thread {
         LocalDateTime lastPing = node.getLastPing();
         LocalDateTime now = LocalDateTime.now();
         Duration sinceLastPing = Duration.between(lastPing, now);
-        if (sinceLastPing.getSeconds() > Config.NODE_CONNECTION_TIMEOUT) {
-            return NodeStatus.Timeout;
+        if (node.getVerificationStatus() == VerificationStatus.Polling) {
+            if (sinceLastPing.getSeconds() > Config.POLLING_NODE_CONNECTION_TIMEOUT) {
+                return NodeStatus.Timeout;
+            }
+        }
+
+        if (node.getVerificationStatus() == VerificationStatus.Working) {
+            if (sinceLastPing.getSeconds() > Config.WORKING_NODE_CONNECTION_TIMEOUT) {
+                return NodeStatus.Timeout;
+            }
+        }
+
+        if (node.getVerificationStatus() == VerificationStatus.CompletedWork) {
+            if (sinceLastPing.getSeconds() > Config.POLLING_NODE_CONNECTION_TIMEOUT) {
+                return NodeStatus.Timeout;
+            }
         }
 
         return NodeStatus.Valid;
