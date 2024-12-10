@@ -233,7 +233,7 @@ public class NodeConnectionManager extends Thread {
                 String[] newTags = new String[tags.length];
                 if (i > 0) {
                     for (int j = 0 ; j < tags.length ; j++) {
-                        newTags[(j - i) % tags.length] = tags[j];
+                        newTags[(tags.length + j - i) % tags.length] = tags[j];
                     }
                     data.tagsTestAndSet(String.join(";", newTags));
                 }

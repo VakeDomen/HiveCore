@@ -1,6 +1,7 @@
 package upr.famnit.components;
 
 import upr.famnit.authentication.VerificationStatus;
+import upr.famnit.util.Logger;
 
 import java.time.LocalDateTime;
 import java.util.concurrent.locks.Lock;
