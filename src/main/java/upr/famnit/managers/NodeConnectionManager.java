@@ -62,25 +62,17 @@ public class NodeConnectionManager extends Thread {
     }
 
     private void handleHandlingException(Request request, IOException e) {
-        Logger.error("Problem handling request from worker node. Count: " +
-                data.getConnectionExceptionCount() +
-                "\nError: " +
+        Logger.error("Problem handling request from worker node. \nError: " +
                 e.getMessage()
         );
     }
 
     private void handleRequestException(Request request, IOException e) {
-        data.incrementExceptionCount();
-        Logger.error("Problem receiving request from worker node. Count: " +
-                data.getConnectionExceptionCount() +
-                "\nError: " +
+        Logger.error("Problem receiving request from worker node. Protocol violation\nError: " +
                 e.getMessage()
         );
 
-        if (data.getConnectionExceptionCount() >= CONNECTION_EXCEPTION_THRESHOLD) {
-            Logger.warn("Too many exceptions. Closing connection.");
-            closeConnection();
-        }
+        closeConnection();
     }
 
     private void authenticateNode() throws IOException {
