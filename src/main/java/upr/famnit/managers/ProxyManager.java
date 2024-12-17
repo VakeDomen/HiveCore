@@ -13,10 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class ProxyManager implements Runnable {
 
@@ -113,28 +110,28 @@ public class ProxyManager implements Runnable {
     }
 
     private void handleActiveWorkersConnectionRequest() throws IOException {
-        HashMap<String, Integer> activeConnections = NodeConnectionMonitor.getActiveConnections();
+        TreeMap<String, Integer> activeConnections = NodeConnectionMonitor.getActiveConnections();
         Gson gson = new Gson();
         String body = gson.toJson(activeConnections);
         respond(ResponseFactory.Ok(body.getBytes(StandardCharsets.UTF_8)));
     }
 
     private void handleActiveWorkersStatusRequest() throws IOException {
-        HashMap<String, ArrayList<VerificationStatus>> activeConnections = NodeConnectionMonitor.getConnectionsStatus();
+        TreeMap<String, ArrayList<VerificationStatus>> activeConnections = NodeConnectionMonitor.getConnectionsStatus();
         Gson gson = new Gson();
         String body = gson.toJson(activeConnections);
         respond(ResponseFactory.Ok(body.getBytes(StandardCharsets.UTF_8)));
     }
 
     private void handleActiveWorkersPingsRequest() throws IOException {
-        HashMap<String, ArrayList<String>> activeConnections = NodeConnectionMonitor.getLastPings();
+        TreeMap<String, ArrayList<String>> activeConnections = NodeConnectionMonitor.getLastPings();
         Gson gson = new Gson();
         String body = gson.toJson(activeConnections);
         respond(ResponseFactory.Ok(body.getBytes(StandardCharsets.UTF_8)));
     }
 
     private void handleActiveWorkersTagsRequest() throws IOException {
-        HashMap<String, Set<String>> activeConnections = NodeConnectionMonitor.getTags();
+        TreeMap<String, Set<String>> activeConnections = NodeConnectionMonitor.getTags();
         Gson gson = new Gson();
         String body = gson.toJson(activeConnections);
         respond(ResponseFactory.Ok(body.getBytes(StandardCharsets.UTF_8)));

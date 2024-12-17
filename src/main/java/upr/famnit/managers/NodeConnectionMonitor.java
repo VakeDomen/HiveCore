@@ -7,10 +7,7 @@ import upr.famnit.util.Logger;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 import upr.famnit.util.Config;
 
@@ -138,8 +135,8 @@ public class NodeConnectionMonitor extends Thread {
         this.monitoring = false;
     }
 
-    public static HashMap<String, Integer> getActiveConnections() {
-        HashMap<String, Integer> connectedNodes = new HashMap<>();
+    public static TreeMap<String, Integer> getActiveConnections() {
+        TreeMap<String, Integer> connectedNodes = new TreeMap<>();
         for (NodeConnectionManager node : nodes) {
             String name = node.getNodeName();
             if (name == null) {
@@ -151,8 +148,8 @@ public class NodeConnectionMonitor extends Thread {
         return connectedNodes;
     }
 
-    public static HashMap<String, ArrayList<VerificationStatus>> getConnectionsStatus() {
-        HashMap<String, ArrayList<VerificationStatus>> connectedNodes = new HashMap<>();
+    public static TreeMap<String, ArrayList<VerificationStatus>> getConnectionsStatus() {
+        TreeMap<String, ArrayList<VerificationStatus>> connectedNodes = new TreeMap<>();
         for (NodeConnectionManager node : nodes) {
             String name = node.getNodeName();
             if (name == null) {
@@ -164,8 +161,8 @@ public class NodeConnectionMonitor extends Thread {
         return connectedNodes;
     }
 
-    public static HashMap<String, ArrayList<String>> getLastPings() {
-        HashMap<String, ArrayList<String>> connectedNodes = new HashMap<>();
+    public static TreeMap<String, ArrayList<String>> getLastPings() {
+        TreeMap<String, ArrayList<String>> connectedNodes = new TreeMap<>();
         for (NodeConnectionManager node : nodes) {
             String name = node.getNodeName();
             if (name == null) {
@@ -177,8 +174,8 @@ public class NodeConnectionMonitor extends Thread {
         return connectedNodes;
     }
 
-    public static HashMap<String, Set<String>> getTags() {
-        HashMap<String, Set<String>> connectedNodes = new HashMap<>();
+    public static TreeMap<String, Set<String>> getTags() {
+        TreeMap<String, Set<String>> connectedNodes = new TreeMap<>();
         for (NodeConnectionManager node : nodes) {
             String name = node.getNodeName();
             if (name == null) {
