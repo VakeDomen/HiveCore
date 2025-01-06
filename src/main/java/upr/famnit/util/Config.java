@@ -77,19 +77,16 @@ public class Config {
             PROXY_PORT = ini.get("Server", "PROXY_PORT", Integer.class);
             NODE_CONNECTION_PORT = ini.get("Server", "NODE_CONNECTION_PORT", Integer.class);
             MANAGEMENT_CONNECTION_PORT = ini.get("Server", "MANAGEMENT_CONNECTION_PORT", Integer.class);
-            PROXY_TIMEOUT_MS = ini.get("Server", "PROXY_TIMEOUT_MS", Integer.class);
-            MESSAGE_CHUNK_BUFFER_SIZE = ini.get("Server", "MESSAGE_CHUNK_BUFFER_SIZE", Integer.class);
-        }
 
-        // Load [Timeouts] section
-        if (ini.containsKey("Timeouts")) {
-            POLLING_NODE_CONNECTION_TIMEOUT = ini.get("Timeouts", "POLLING_NODE_CONNECTION_TIMEOUT", Integer.class);
-            WORKING_NODE_CONNECTION_TIMEOUT = ini.get("Timeouts", "WORKING_NODE_CONNECTION_TIMEOUT", Integer.class);
         }
 
         // Load [Connection] section
         if (ini.containsKey("Connection")) {
             CONNECTION_EXCEPTION_THRESHOLD = ini.get("Connection", "CONNECTION_EXCEPTION_THRESHOLD", Integer.class);
+            POLLING_NODE_CONNECTION_TIMEOUT = ini.get("Connection", "POLLING_NODE_CONNECTION_TIMEOUT", Integer.class);
+            WORKING_NODE_CONNECTION_TIMEOUT = ini.get("Connection", "WORKING_NODE_CONNECTION_TIMEOUT", Integer.class);
+            PROXY_TIMEOUT_MS = ini.get("Connection", "PROXY_TIMEOUT_MS", Integer.class);
+            MESSAGE_CHUNK_BUFFER_SIZE = ini.get("Connection", "MESSAGE_CHUNK_BUFFER_SIZE", Integer.class);
         }
 
         // Load [Database] section
@@ -113,14 +110,15 @@ public class Config {
         ini.put("Server", "PROXY_PORT", PROXY_PORT);
         ini.put("Server", "NODE_CONNECTION_PORT", NODE_CONNECTION_PORT);
         ini.put("Server", "MANAGEMENT_CONNECTION_PORT", MANAGEMENT_CONNECTION_PORT);
-        ini.put("Server", "PROXY_TIMEOUT_MS", PROXY_TIMEOUT_MS);
-        ini.put("Server", "MESSAGE_CHUNK_BUFFER_SIZE", MESSAGE_CHUNK_BUFFER_SIZE);
+
 
         // [Connection] section
         ini.add("Connection");
         ini.put("Connection", "POLLING_NODE_CONNECTION_TIMEOUT", POLLING_NODE_CONNECTION_TIMEOUT);
         ini.put("Connection", "WORKING_NODE_CONNECTION_TIMEOUT", WORKING_NODE_CONNECTION_TIMEOUT);
         ini.put("Connection", "CONNECTION_EXCEPTION_THRESHOLD", CONNECTION_EXCEPTION_THRESHOLD);
+        ini.put("Connection", "PROXY_TIMEOUT_MS", PROXY_TIMEOUT_MS);
+        ini.put("Connection", "MESSAGE_CHUNK_BUFFER_SIZE", MESSAGE_CHUNK_BUFFER_SIZE);
 
         // [Database] section
         ini.add("Database");
