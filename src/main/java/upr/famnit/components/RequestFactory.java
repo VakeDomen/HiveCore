@@ -10,4 +10,14 @@ public class RequestFactory {
                 null
         );
     }
+
+    public static Request AuthenticationResponse(String name) {
+        return new Request(
+                "HIVE",
+                "AUTH",
+                name,
+                null,
+                null
+        );
+    }
 }

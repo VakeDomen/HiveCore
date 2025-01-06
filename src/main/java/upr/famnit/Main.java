@@ -5,6 +5,7 @@ import upr.famnit.managers.DatabaseManager;
 import upr.famnit.network.ClientServer;
 import upr.famnit.network.ManagementServer;
 import upr.famnit.network.NodeServer;
+import upr.famnit.util.Config;
 import upr.famnit.util.Logger;
 
 import java.io.*;
@@ -14,6 +15,7 @@ public class Main {
 
     public static void main(String[] args) {
         try {
+            Config.init();
             DatabaseManager.createKeysTable();
 
             NodeServer nodeServer = new NodeServer();

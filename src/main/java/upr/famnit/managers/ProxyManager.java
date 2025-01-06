@@ -11,8 +11,6 @@ import java.io.IOException;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.*;
 
 public class ProxyManager implements Runnable {
@@ -47,6 +45,8 @@ public class ProxyManager implements Runnable {
                 case "/worker/status" -> handleWorkerStatusRoute();
                 case "/worker/pings" -> handleWorkerPingsRoute();
                 case "/worker/tags" -> handleWorkerTagsRoute();
+                case "/worker/version/hive" -> handleWorkerHiveVersionRoute();
+                case "/worker/version/ollama" -> handleWorkerOllamaVersionRoute();
                 case "/queue" -> handleQueueRoute();
                 case null, default -> respond(ResponseFactory.NotFound());
             }
@@ -95,6 +95,20 @@ public class ProxyManager implements Runnable {
         }
     }
 
+    private void handleWorkerOllamaVersionRoute() throws IOException {
+        switch (clientRequest.getRequest().getMethod()) {
+            case "GET" -> handleWorkersOllamaVersionRequest();
+            case null, default -> respond(ResponseFactory.NotFound());
+        }
+    }
+
+    private void handleWorkerHiveVersionRoute() throws IOException {
+        switch (clientRequest.getRequest().getMethod()) {
+            case "GET" -> handleWorkersHiveVersionRequest();
+            case null, default -> respond(ResponseFactory.NotFound());
+        }
+    }
+
     private void handleWorkerTagsRoute() throws IOException {
         switch (clientRequest.getRequest().getMethod()) {
             case "GET" -> handleActiveWorkersTagsRequest();
@@ -132,6 +146,20 @@ public class ProxyManager implements Runnable {
 
     private void handleActiveWorkersTagsRequest() throws IOException {
         TreeMap<String, Set<String>> activeConnections = NodeConnectionMonitor.getTags();
+        Gson gson = new Gson();
+        String body = gson.toJson(activeConnections);
+        respond(ResponseFactory.Ok(body.getBytes(StandardCharsets.UTF_8)));
+    }
+
+    private void handleWorkersHiveVersionRequest() throws IOException {
+        TreeMap<String, Set<String>> activeConnections = NodeConnectionMonitor.getNodeVersions();
+        Gson gson = new Gson();
+        String body = gson.toJson(activeConnections);
+        respond(ResponseFactory.Ok(body.getBytes(StandardCharsets.UTF_8)));
+    }
+
+    private void handleWorkersOllamaVersionRequest() throws IOException {
+        TreeMap<String, Set<String>> activeConnections = NodeConnectionMonitor.getOllamaVersions();
         Gson gson = new Gson();
         String body = gson.toJson(activeConnections);
         respond(ResponseFactory.Ok(body.getBytes(StandardCharsets.UTF_8)));

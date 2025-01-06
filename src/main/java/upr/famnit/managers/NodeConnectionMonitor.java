@@ -1,10 +1,8 @@
 package upr.famnit.managers;
 
 import upr.famnit.authentication.VerificationStatus;
-import upr.famnit.components.LogLevel;
 import upr.famnit.util.Logger;
 
-import java.io.IOException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -50,9 +48,9 @@ public class NodeConnectionMonitor extends Thread {
             NodeStatus status = checkNode(node);
 
             // stop connection if violated any rules
-            if (status != NodeStatus.Valid) {
+            if (status != NodeStatus.Timeout) {
                 node.closeConnection();
-                Logger.warn("Closing node connection (" + node.getNodeName() + ") due to: " + status);
+                Logger.warn("Closing node connection (" + node.getData().getNodeName() + ") due to: " + status);
                 toRemove.add(node);
             }
         }
@@ -68,7 +66,7 @@ public class NodeConnectionMonitor extends Thread {
         }
 
         // stop if node connection has been rejected (key-nonce mismatch)
-        VerificationStatus nodeStatus = node.getVerificationStatus();
+        VerificationStatus nodeStatus = node.getData().getVerificationStatus();
         if (nodeStatus == VerificationStatus.Rejected) {
             return NodeStatus.Rejected;
         }
@@ -79,22 +77,22 @@ public class NodeConnectionMonitor extends Thread {
         }
 
         // check for timeouts
-        LocalDateTime lastPing = node.getLastPing();
+        LocalDateTime lastPing = node.getData().getLastPing();
         LocalDateTime now = LocalDateTime.now();
         Duration sinceLastPing = Duration.between(lastPing, now);
-        if (node.getVerificationStatus() == VerificationStatus.Polling) {
+        if (node.getData().getVerificationStatus() == VerificationStatus.Polling) {
             if (sinceLastPing.getSeconds() > Config.POLLING_NODE_CONNECTION_TIMEOUT) {
                 return NodeStatus.Timeout;
             }
         }
 
-        if (node.getVerificationStatus() == VerificationStatus.Working) {
+        if (node.getData().getVerificationStatus() == VerificationStatus.Working) {
             if (sinceLastPing.getSeconds() > Config.WORKING_NODE_CONNECTION_TIMEOUT) {
                 return NodeStatus.Timeout;
             }
         }
 
-        if (node.getVerificationStatus() == VerificationStatus.CompletedWork) {
+        if (node.getData().getVerificationStatus() == VerificationStatus.CompletedWork) {
             if (sinceLastPing.getSeconds() > Config.POLLING_NODE_CONNECTION_TIMEOUT) {
                 return NodeStatus.Timeout;
             }
@@ -104,23 +102,25 @@ public class NodeConnectionMonitor extends Thread {
     }
 
     private NodeStatus verifyKeyAndNonce(NodeConnectionManager node) {
-        String nodeName = node.getNodeName();
-        String nodeNonce = node.getNonce();
+        String nodeName = node.getData().getNodeName();
+        String nodeNonce = node.getData().getNonce();
 
         for (NodeConnectionManager nodeConnectionManager : nodes) {
-            if (nodeConnectionManager.getVerificationStatus() != VerificationStatus.Verified) {
+            if (nodeConnectionManager.getData().getVerificationStatus() != VerificationStatus.Verified) {
                 continue;
             }
 
+            // if same node name, different nonce
             if (
-                    nodeConnectionManager.getNodeName().equals(nodeName) &&
-                    !nodeConnectionManager.getNonce().equals(nodeNonce)
+                    nodeConnectionManager.getData().getNodeName().equals(nodeName) &&
+                    !nodeConnectionManager.getData().getNonce().equals(nodeNonce)
             ) {
+                node.getData().setVerificationStatus(VerificationStatus.Rejected);
                 return NodeStatus.InvalidNonce;
             }
         }
 
-        node.setVerificationStatus(VerificationStatus.Verified);
+        node.getData().setVerificationStatus(VerificationStatus.Verified);
         return NodeStatus.Valid;
     }
 
@@ -138,7 +138,7 @@ public class NodeConnectionMonitor extends Thread {
     public static TreeMap<String, Integer> getActiveConnections() {
         TreeMap<String, Integer> connectedNodes = new TreeMap<>();
         for (NodeConnectionManager node : nodes) {
-            String name = node.getNodeName();
+            String name = node.getData().getNodeName();
             if (name == null) {
                 name = "Unauthenticated";
             }
@@ -151,12 +151,12 @@ public class NodeConnectionMonitor extends Thread {
     public static TreeMap<String, ArrayList<VerificationStatus>> getConnectionsStatus() {
         TreeMap<String, ArrayList<VerificationStatus>> connectedNodes = new TreeMap<>();
         for (NodeConnectionManager node : nodes) {
-            String name = node.getNodeName();
+            String name = node.getData().getNodeName();
             if (name == null) {
                 name = "Unauthenticated";
             }
             connectedNodes.putIfAbsent(name, new ArrayList<>());
-            connectedNodes.get(name).add(node.getVerificationStatus());
+            connectedNodes.get(name).add(node.getData().getVerificationStatus());
         }
         return connectedNodes;
     }
@@ -164,12 +164,12 @@ public class NodeConnectionMonitor extends Thread {
     public static TreeMap<String, ArrayList<String>> getLastPings() {
         TreeMap<String, ArrayList<String>> connectedNodes = new TreeMap<>();
         for (NodeConnectionManager node : nodes) {
-            String name = node.getNodeName();
+            String name = node.getData().getNodeName();
             if (name == null) {
                 name = "Unauthenticated";
             }
             connectedNodes.putIfAbsent(name, new ArrayList<>());
-            connectedNodes.get(node.getNodeName()).add(node.getLastPing().toString());
+            connectedNodes.get(node.getData().getNodeName()).add(node.getData().getLastPing().toString());
         }
         return connectedNodes;
     }
@@ -177,12 +177,46 @@ public class NodeConnectionMonitor extends Thread {
     public static TreeMap<String, Set<String>> getTags() {
         TreeMap<String, Set<String>> connectedNodes = new TreeMap<>();
         for (NodeConnectionManager node : nodes) {
-            String name = node.getNodeName();
+            String name = node.getData().getNodeName();
             if (name == null) {
                 name = "Unauthenticated";
             }
             connectedNodes.putIfAbsent(name, new HashSet<>());
-            connectedNodes.get(node.getNodeName()).addAll(node.getTags());
+            connectedNodes.get(node.getData().getNodeName()).addAll(node.getTags());
+        }
+        return connectedNodes;
+    }
+
+    public static TreeMap<String, Set<String>> getOllamaVersions() {
+        TreeMap<String, Set<String>> connectedNodes = new TreeMap<>();
+        for (NodeConnectionManager node : nodes) {
+            String name = node.getData().getNodeName();
+            if (name == null) {
+                name = "Unauthenticated";
+            }
+            connectedNodes.putIfAbsent(name, new HashSet<>());
+            String version = node.getData().getOllamaVersion();
+            if (version == null) {
+                version = "Unknown";
+            }
+            connectedNodes.get(node.getData().getNodeName()).add(version);
+        }
+        return connectedNodes;
+    }
+
+    public static TreeMap<String, Set<String>> getNodeVersions() {
+        TreeMap<String, Set<String>> connectedNodes = new TreeMap<>();
+        for (NodeConnectionManager node : nodes) {
+            String name = node.getData().getNodeName();
+            if (name == null) {
+                name = "Unauthenticated";
+            }
+            connectedNodes.putIfAbsent(name, new HashSet<>());
+            String version = node.getData().getNodeVersion();
+            if (version == null) {
+                version = "Unknown";
+            }
+            connectedNodes.get(node.getData().getNodeName()).add(version);
         }
         return connectedNodes;
     }

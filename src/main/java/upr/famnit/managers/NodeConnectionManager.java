@@ -90,7 +90,7 @@ public class NodeConnectionManager extends Thread {
             return;
         }
 
-        Thread.currentThread().setName(data.getNodeName());
+        connection.send(RequestFactory.AuthenticationResponse(data.getNodeName()));
     }
 
     private void waitForAuthRequestAndValidate() throws IOException, InterruptedException {
@@ -99,13 +99,15 @@ public class NodeConnectionManager extends Thread {
             throw new IOException("First message should be authentication");
         }
 
-        String[] keyAndNonce = request.getUri().split(";");
-        if (keyAndNonce.length != 2) {
+        String[] authenticationData = request.getUri().split(";");
+        if (authenticationData.length != 4) {
             throw new IOException("Not valid authentication key and nonce pair.");
         }
 
-        String key = keyAndNonce[0];
-        String nonce = keyAndNonce[1];
+        String key = authenticationData[0];
+        String nonce = authenticationData[1];
+        String nodeVersion = authenticationData[2];
+        String ollamaVersion = authenticationData[3];
 
         if (!KeyUtil.verifyKey(key, VerificationType.NodeConnection)) {
             throw new IOException("Not valid authentication key.");
@@ -114,6 +116,10 @@ public class NodeConnectionManager extends Thread {
         data.setNonce(nonce);
         data.setNodeName(KeyUtil.nameKey(key));
         data.setVerificationStatus(VerificationStatus.Waiting);
+        data.setNodeVersion(nodeVersion);
+        data.setOllamaVersion(ollamaVersion);
+        Thread.currentThread().setName(data.getNodeName());
+
         while (data.getVerificationStatus() == VerificationStatus.Waiting) sleep(50);
     }
 
@@ -235,26 +241,6 @@ public class NodeConnectionManager extends Thread {
         return null;
     }
 
-    public LocalDateTime getLastPing() {
-        return data.getLastPing();
-    }
-
-    public VerificationStatus getVerificationStatus() {
-        return data.getVerificationStatus();
-    }
-
-    public void setVerificationStatus(VerificationStatus status) {
-        data.setVerificationStatus(status);
-    }
-
-    public String getNodeName() {
-        return data.getNodeName();
-    }
-
-    public String getNonce() {
-        return data.getNonce();
-    }
-
     public boolean isConnectionOpen() {
         return data.getVerificationStatus() != VerificationStatus.Closed && connection.isFine();
     }
@@ -265,6 +251,9 @@ public class NodeConnectionManager extends Thread {
         }
     }
 
+    public NodeData getData() {
+        return data;
+    }
 
 
     public ArrayList<String> getTags() {

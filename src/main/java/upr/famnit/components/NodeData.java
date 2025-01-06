@@ -17,6 +17,8 @@ public class NodeData {
     private LocalDateTime lastPing;
     private int connectionExceptionCount;
     private String nodeName;
+    private String ollamaVersion;
+    private String nodeVersion;
     private volatile VerificationStatus verificationStatus;
     private volatile String nonce;
     private volatile String tags;
@@ -125,5 +127,30 @@ public class NodeData {
         return ret;
     }
 
+    public void setOllamaVersion(String version) {
+        statusWriteLock.lock();
+        this.ollamaVersion = version;
+        statusWriteLock.unlock();
+    }
+
+    public void setNodeVersion(String nodeVersion) {
+        statusWriteLock.lock();
+        this.nodeVersion = nodeVersion;
+        statusWriteLock.unlock();
+    }
+
+    public String getOllamaVersion() {
+        statusReadLock.lock();
+        String ret = ollamaVersion;
+        statusReadLock.unlock();
+        return ret;
+    }
+
+    public String getNodeVersion() {
+        statusReadLock.lock();
+        String ret = nodeVersion;
+        statusReadLock.unlock();
+        return ret;
+    }
 
 }
