@@ -1,45 +1,44 @@
-HiveCore
-========
+# HiveCore
 
-HiveCore is a proxy solution designed to unify scattered machines running [Ollama](https://github.com/jmorganca/ollama) into a single, cohesive API. Whether you have multiple nodes each capable of Ollama inference or want a centralized gateway for distributing client requests, HiveCore helps you coordinate, monitor, and manage these worker nodes with ease.
 
-Table of Contents
------------------
+HiveCore is a proxy solution designed to unify scattered machines running [Ollama](https://github.com/ollama/ollama) into a single, cohesive API. Whether you have multiple nodes each capable of Ollama inference or want a centralized gateway for distributing client requests, HiveCore helps you coordinate, monitor, and manage these worker nodes with ease.
 
-1.  **Overview**
-2.  **Key Features**
-3.  **Getting Started**
-4.  **Architecture & Components**
-5.  **Usage & Configuration**
-6.  **API Endpoints**
-    *   **Authentication & Admin Requests**
-    *   **`/key`**
-    *   **`/queue`**
-    *   **`/worker/connections`**
-    *   **`/worker/status`**
-    *   **`/worker/pings`**
-    *   **`/worker/tags`**
-    *   **`/worker/version/hive`**
-    *   **`/worker/version/ollama`**
-7.  **Contributing**
-8.  **License**
+# Table of Contents
+
+1.  [**Overview**](#1-overview)
+2.  [**Key Features**](#2-key-features)
+3.  [**Getting Started**](#3-getting-started)
+4.  [**Architecture & Components**](#4-architecture--components)
+5.  [**Usage & Configuration**](#5-usage--configuration)
+6.  [**API Endpoints**](#6-api-endpoints)
+      - [Authentication & Admin Requests](#authentication--admin-requests)
+      - [\`/key\`](#key)
+      - [\`/queue\`](#queue)
+      - [\`/worker/connections\`](#workerconnections)
+      - [\`/worker/status\`](#workerstatus)
+      - [\`/worker/pings\`](#workerpings)
+      - [\`/worker/tags\`](#workertags)
+      - [\`/worker/version/hive\`](#workerversionhive)
+      - [\`/worker/version/ollama\`](#workerversionollama)
+7.  [**Contributing**](#7-contributing)
+8.  [**License**](#8-license)
 
 * * *
 
-1\. Overview
-------------
+# 1. Overview
+
 
 **HiveCore** aims to streamline the process of distributing Ollama inference requests across multiple worker nodes. By acting as a proxy, HiveCore allows you to:
 
 *   **Centralize** client requests into one API endpoint, simplifying how your users interact with Ollama across various machines.
 *   **Authenticate** and **manage** nodes, ensuring only verified systems can participate.
 *   **Distribute** requests intelligently to available nodes, balancing load for optimal performance.
-*   **Monitor** and **manage** keys, queues, and node statuses through expressive REST endpoints.
+*   **Monitor** and **manage** keys, queues, and node statuses through HTTP endpoints.
 
 * * *
 
-2\. Key Features
-----------------
+# 2. Key Features
+
 
 *   **Ollama Proxy & Load Distribution**  
     Collect all your Ollama-ready machines under one unified API to handle inference requests.
@@ -59,36 +58,33 @@ Table of Contents
 
 * * *
 
-3\. Getting Started
--------------------
+# 3. Getting Started
+
 
 1.  **Clone the Project**
 
-    bash
+    ```bash
+    git clone https://github.com/VakeDomen/HiveCore.git
+    cd HiveCore
+    ```
 
-    Copy code
+3.  **Set Up the Database**
 
-    `git clone https://github.com/YourUsername/HiveCore.git cd HiveCore`
+    *   By default, HiveCore uses SQLite. Ensure your environment is capable of running SQLite. The location of the sqlite db file is configured in the `Config`.
+4.  **Build & Run**
 
-2.  **Set Up the Database**
+    *   Use Maven to compile the code:
 
-    *   By default, HiveCore uses SQLite. Ensure your environment is capable of running SQLite or update the database configuration in `Config`.
-3.  **Build & Run**
-
-    *   Use Maven or Gradle (or your preferred build tool) to compile the code:
-
-        bash
-
-        Copy code
-
-        `mvn clean install`
+        ```bash
+        mvn clean install
+        ```
 
     *   Run the generated jar or start the main class that launches **ClientServer**, **ManagementServer**, and **NodeServer**.
 
 * * *
 
-4\. Architecture & Components
------------------------------
+# 4. Architecture & Components
+
 
 Below is a high-level overview of the key components:
 
@@ -113,26 +109,26 @@ Below is a high-level overview of the key components:
 
 * * *
 
-5\. Usage & Configuration
--------------------------
+# 5. Usage & Configuration
 
 1.  **Configuration File**
+    * When the HiveCore runs it first checks if there exists a `config.ini` file. If not, it creates one.
 
     *   **`config.ini`**: Contains ports, timeout settings, and flags for authentication. Edit this file to change the default ports or enable/disable user authentication.
-2.  **Authentication**
+3.  **Authentication**
 
     *   Endpoints require a **Bearer** token. For admin-specific endpoints, the token must belong to a key with the **Admin** role.
-3.  **Logs**
+4.  **Logs**
 
     *   Logging is provided by `Logger`. Watch the console or redirect output to a file for insights into request handling, node connections, and potential errors.
-4.  **Scaling**
+5.  **Scaling**
 
     *   To scale horizontally, run additional worker nodes (each with Ollama) and point them to the same NodeServer. The NodeConnectionMonitor ensures newly connected nodes are recognized after authentication.
 
 * * *
 
-6\. API Endpoints
------------------
+# 6. API Endpoints
+
 
 ### Authentication & Admin Requests
 
@@ -157,11 +153,11 @@ Below is a high-level overview of the key components:
     *   **Purpose**: Insert a new key into the database.
     *   **Body** (JSON):
 
-        json
+        
 
-        Copy code
-
-        `{   "name": "MyNodeKey",   "role": "Admin"  }`
+        ```json
+        {   "name": "MyNodeKey",   "role": "Admin"  }
+        ```
 
     *   **Authorization**: Admin only.
     *   **Responses**:
@@ -241,8 +237,7 @@ Below is a high-level overview of the key components:
 
 * * *
 
-7\. Contributing
-----------------
+# 7. Contributing
 
 We welcome contributions! Please open an **issue** to discuss proposed changes before submitting a pull request. Make sure to:
 
@@ -252,11 +247,10 @@ We welcome contributions! Please open an **issue** to discuss proposed changes b
 
 * * *
 
-8\. License
------------
+# 8. License
 
 This project is distributed under the **MIT License**. See the LICENSE file for more details.
 
 * * *
 
-Thank you for considering **HiveCore** for your Ollama proxy needs! If you have questions, encounter any issues, or want to contribute, feel free to open an issue or submit a pull request on the [GitHub repository](https://github.com/YourUsername/HiveCore). We look forward to collaborating with you!
+Thank you for considering **HiveCore** for your Ollama proxy needs! If you have questions, encounter any issues, or want to contribute, feel free to open an issue or submit a pull request on the [GitHub repository](https://github.com/VakeDomen/HiveCore). We look forward to collaborating with you!
