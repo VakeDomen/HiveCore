@@ -3,7 +3,9 @@ package upr.famnit.components;
 import upr.famnit.util.Logger;
 import upr.famnit.util.StreamUtil;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
@@ -65,7 +67,6 @@ public class RequestQue {
         request.stampQueueEnter();
         String nodeName = request.getRequest().getHeaders().get("node");
 
-
         if (nodeName == null) {
             Logger.warn("Unable to determine target node for request.");
             return false;
@@ -82,4 +83,42 @@ public class RequestQue {
         nodeQue.forEach((node, queue) -> queLengths.put("Node: " + node, queue.size()));
         return queLengths;
     }
+
+    public static ClientRequest getUnhandlableTask(ArrayList<String> nodeNames, Set<String> modelNames) {
+        for (String nodeName : nodeQue.keySet()) {
+            if (nodeNames.contains(nodeName)) {
+                continue;
+            }
+
+            ConcurrentLinkedQueue<ClientRequest> specificNodeQue = nodeQue.get(nodeName);
+            if (specificNodeQue == null) {
+                continue;
+            }
+
+            ClientRequest req = specificNodeQue.poll();
+            if (req != null) {
+                return req;
+            }
+        }
+
+        for (String modelName : modelQue.keySet()) {
+            if (modelNames.contains(modelName)) {
+                continue;
+            }
+
+            ConcurrentLinkedQueue<ClientRequest> specificModelQue = modelQue.get(modelName);
+            if (specificModelQue == null) {
+                continue;
+            }
+
+            ClientRequest req = specificModelQue.poll();
+            if (req != null) {
+                return req;
+            }
+        }
+
+        return null;
+    }
+
+
 }

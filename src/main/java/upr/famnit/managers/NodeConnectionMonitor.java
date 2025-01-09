@@ -1,13 +1,20 @@
 package upr.famnit.managers;
 
 import upr.famnit.authentication.VerificationStatus;
+import upr.famnit.components.ClientRequest;
+import upr.famnit.components.RequestQue;
+import upr.famnit.components.ResponseFactory;
 import upr.famnit.util.Logger;
 
+import java.io.IOException;
+import java.io.OutputStream;
+import java.net.Socket;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
 
 import upr.famnit.util.Config;
+import upr.famnit.util.StreamUtil;
 
 public class NodeConnectionMonitor extends Thread {
 
@@ -30,6 +37,8 @@ public class NodeConnectionMonitor extends Thread {
                 checkOnWorkers();
             }
 
+            checkOnQueue();
+
             try {
                 Thread.sleep(500);
             } catch (InterruptedException e) {
@@ -39,6 +48,30 @@ public class NodeConnectionMonitor extends Thread {
 
 
         Logger.status("Monitor stopped.");
+    }
+
+    private void checkOnQueue() {
+        ArrayList<String> nodeNames = new ArrayList<>();
+        Set<String> modelNames = new HashSet<>();
+        synchronized (nodeLock) {
+            for (NodeConnectionManager node : nodes) {
+                nodeNames.add(node.getName());
+                modelNames.addAll(node.getTags());
+            }
+        }
+
+        ClientRequest reqToReject = RequestQue.getUnhandlableTask(nodeNames, modelNames);
+        while (reqToReject != null) {
+            try {
+                OutputStream os = reqToReject.getClientSocket().getOutputStream();
+                StreamUtil.sendResponse(os, ResponseFactory.MethodNotAllowed());
+                Logger.warn("Rejected unhandlable request: ");
+                reqToReject.getRequest().log();
+            } catch (IOException e) {
+                Logger.error("Could not send rejection response to socket: " + reqToReject.getClientSocket().getInetAddress());
+            }
+            reqToReject = RequestQue.getUnhandlableTask(nodeNames, modelNames);
+        }
     }
 
     private void checkOnWorkers() {
