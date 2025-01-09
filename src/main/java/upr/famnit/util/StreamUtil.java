@@ -1,6 +1,5 @@
 package upr.famnit.util;
 
-import upr.famnit.components.LogLevel;
 import upr.famnit.components.Request;
 import upr.famnit.components.Response;
 

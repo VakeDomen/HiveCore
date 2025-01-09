@@ -1,6 +1,5 @@
 package upr.famnit;
 
-import upr.famnit.components.LogLevel;
 import upr.famnit.managers.DatabaseManager;
 import upr.famnit.network.ClientServer;
 import upr.famnit.network.ManagementServer;

@@ -1,8 +1,6 @@
 package upr.famnit.util;
 
 
-import upr.famnit.components.LogLevel;
-
 import java.text.SimpleDateFormat;
 import java.util.Date;
 

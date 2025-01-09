@@ -1,6 +1,5 @@
 package upr.famnit.network;
 
-import upr.famnit.components.LogLevel;
 import upr.famnit.managers.NodeConnectionManager;
 import upr.famnit.managers.NodeConnectionMonitor;
 import upr.famnit.util.Logger;
