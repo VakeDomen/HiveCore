@@ -6,6 +6,13 @@ import java.io.File;
 import java.io.IOException;
 
 public class Config {
+    // boolean determines whether the proxy accepts unauthenticated
+    // requests. If set to true, the client must send an
+    // Authorization header in the request with a valid
+    // Bearer <token>. Valid tokens are provided by the
+    // administrator. If set to false, the api is open for use
+    // without valid authentication.
+    public static boolean USER_AUTHENTICATION = false;
 
     // Port for client connections
     public static int PROXY_PORT = 6666;
@@ -74,10 +81,10 @@ public class Config {
 
         // Load [Server] section
         if (ini.containsKey("Server")) {
+            USER_AUTHENTICATION = ini.get("Server", "USER_AUTHENTICATION", Boolean.class);
             PROXY_PORT = ini.get("Server", "PROXY_PORT", Integer.class);
             NODE_CONNECTION_PORT = ini.get("Server", "NODE_CONNECTION_PORT", Integer.class);
             MANAGEMENT_CONNECTION_PORT = ini.get("Server", "MANAGEMENT_CONNECTION_PORT", Integer.class);
-
         }
 
         // Load [Connection] section
@@ -107,6 +114,7 @@ public class Config {
 
         // [Server] section
         ini.add("Server");
+        ini.put("Server", "USER_AUTHENTICATION", USER_AUTHENTICATION);
         ini.put("Server", "PROXY_PORT", PROXY_PORT);
         ini.put("Server", "NODE_CONNECTION_PORT", NODE_CONNECTION_PORT);
         ini.put("Server", "MANAGEMENT_CONNECTION_PORT", MANAGEMENT_CONNECTION_PORT);

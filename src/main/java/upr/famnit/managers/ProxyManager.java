@@ -7,7 +7,9 @@ import upr.famnit.components.*;
 import upr.famnit.util.Logger;
 import upr.famnit.util.StreamUtil;
 
+import javax.security.sasl.AuthenticationException;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;

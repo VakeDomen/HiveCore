@@ -1,11 +1,16 @@
 package upr.famnit.components;
 
+import upr.famnit.authentication.KeyUtil;
+import upr.famnit.authentication.VerificationType;
+import upr.famnit.util.Config;
 import upr.famnit.util.Logger;
 import upr.famnit.util.StreamUtil;
 
+import javax.security.sasl.AuthenticationException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.Socket;
+import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -29,20 +34,20 @@ public class Request {
     public Request(Socket socket) throws IOException {
         // Read the client's request line
         if (socket.isClosed() || !socket.isConnected()) {
-            throw new IOException("Socket closed or not connected");
+            throw new SocketException("Socket closed or not connected");
         }
 
         InputStream clientInputStream = socket.getInputStream();
         String requestLine = StreamUtil.readLine(clientInputStream);
 
         if (requestLine == null || requestLine.isEmpty()) {
-            throw new IOException("Received empty request from client. ");
+            throw new SocketException("Received empty request from client. ");
         }
 
         // Parse the request line
         String[] requestParts = requestLine.split(" ");
         if (requestParts.length != 3) {
-            throw new IOException("Bad Request");
+            throw new SocketException("Bad Request");
         }
 
         this.method = requestParts[0];

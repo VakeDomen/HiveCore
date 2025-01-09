@@ -1,9 +1,16 @@
 package upr.famnit.components;
 
+import upr.famnit.authentication.KeyUtil;
+import upr.famnit.authentication.VerificationType;
+import upr.famnit.util.Config;
 import upr.famnit.util.Logger;
 
+import javax.security.sasl.AuthenticationException;
 import java.io.*;
 import java.net.Socket;
+import java.net.SocketException;
+import java.util.HashMap;
+import java.util.Map;
 
 import static upr.famnit.util.Config.PROXY_TIMEOUT_MS;
 
@@ -28,6 +35,26 @@ public class ClientRequest {
         this.clientSocket = clientSocket;
         clientSocket.setSoTimeout(PROXY_TIMEOUT_MS);
         this.request = new Request(clientSocket);
+        this.authorize();
+    }
+
+    private void authorize() throws AuthenticationException {
+        if (Config.USER_AUTHENTICATION) {
+            Map<String, String> headers = this.request.getHeaders();
+            if (!headers.containsKey("authorization")) {
+                throw new AuthenticationException("Missing authorization header");
+            }
+
+            String[] tokens = headers.get("authorization").split(" ");
+            if (tokens.length != 2) {
+                throw new AuthenticationException("Invalid authorization header");
+            }
+
+            String key = tokens[1];
+            if (!KeyUtil.verifyKey(key, VerificationType.ClientRequest)) {
+                throw new AuthenticationException("Invalid authorization header");
+            }
+        }
     }
 
     public Socket getClientSocket() {
