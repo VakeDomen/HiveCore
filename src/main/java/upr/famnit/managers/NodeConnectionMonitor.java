@@ -342,7 +342,7 @@ public class NodeConnectionMonitor extends Thread {
             for (NodeConnectionManager node : nodes) {
                 String name = node.getData().getNodeName();
                 if (name == null) {
-                    name = "Unauthenticated";
+                    continue;
                 }
                 connectedNodes.putIfAbsent(name, new ArrayList<>());
                 connectedNodes.get(name).add(node.getData().getLastPing().toString());
@@ -362,7 +362,7 @@ public class NodeConnectionMonitor extends Thread {
             for (NodeConnectionManager node : nodes) {
                 String name = node.getData().getNodeName();
                 if (name == null) {
-                    name = "Unauthenticated";
+                    continue;
                 }
                 connectedNodes.putIfAbsent(name, new HashSet<>());
                 connectedNodes.get(name).addAll(node.getTags());
@@ -382,7 +382,7 @@ public class NodeConnectionMonitor extends Thread {
             for (NodeConnectionManager node : nodes) {
                 String name = node.getData().getNodeName();
                 if (name == null) {
-                    name = "Unauthenticated";
+                    continue;
                 }
                 connectedNodes.putIfAbsent(name, new HashSet<>());
                 String version = node.getData().getOllamaVersion();
@@ -406,7 +406,7 @@ public class NodeConnectionMonitor extends Thread {
             for (NodeConnectionManager node : nodes) {
                 String name = node.getData().getNodeName();
                 if (name == null) {
-                    name = "Unauthenticated";
+                    continue;
                 }
                 connectedNodes.putIfAbsent(name, new HashSet<>());
                 String version = node.getData().getNodeVersion();
