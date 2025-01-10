@@ -166,9 +166,11 @@ public class NodeConnectionManager extends Thread {
             Logger.status("Worker authenticated: " + data.getNodeName());
             connection.send(RequestFactory.AuthenticationResponse(data.getNodeName()));
         } catch (IOException e) {
+            data.setVerificationStatus(VerificationStatus.Rejected);
             Logger.error("IOException when authenticating node: " + e.getMessage());
             throw e;
         } catch (InterruptedException e) {
+            data.setVerificationStatus(VerificationStatus.Rejected);
             Logger.error("Authenticating node interrupted: " + e.getMessage());
             Thread.currentThread().interrupt();
             throw new IOException("Authentication interrupted", e);
