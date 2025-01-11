@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>org.example</groupId>
+    <groupId>upr.famnit</groupId>
     <artifactId>HiveCore</artifactId>
     <version>1.0-SNAPSHOT</version>
 
@@ -31,48 +31,22 @@
             <version>0.5.4</version>
         </dependency>
     </dependencies>
-
     <build>
         <plugins>
-            <!-- Maven Assembly Plugin -->
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-assembly-plugin</artifactId>
-                <version>3.4.0</version>
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>your.main.Class</mainClass> <!-- Replace with your actual main class -->
+                            <mainClass>upr.famnit.Main</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>
                         <descriptorRef>jar-with-dependencies</descriptorRef>
                     </descriptorRefs>
                 </configuration>
-                <executions>
-                    <execution>
-                        <id>make-assembly</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>single</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <!-- Maven Jar Plugin -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jar-plugin</artifactId>
-                <version>3.3.0</version>
-                <configuration>
-                    <archive>
-                        <manifest>
-                            <mainClass>your.main.Class</mainClass> <!-- Replace with your actual main class -->
-                        </manifest>
-                    </archive>
-                </configuration>
             </plugin>
         </plugins>
     </build>
+
 </project>

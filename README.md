@@ -71,16 +71,23 @@ By simplifying connectivity requirements, HiveCore eliminates the need for compl
 3.  **Set Up the Database**
 
     *   By default, HiveCore uses SQLite. Ensure your environment is capable of running SQLite. The SQLite database will be created automatically on the fist run of HiveCore. The location of the sqlite db file is configured in the `Config`.
-4.  **Build & Run**
+4. **Build & Run**
 
-    *   Use Maven to compile the code:
-
-        ```bash
-        mvn clean install
-        ```
+    *   Use Maven to clean and compile the project:
+    Run the Maven lifecycle to clean and compile the project:
+    ```bash
+    mvn clean compile
+    ```
+    
+    *   Generate the Fat JAR with Dependencies: Use the maven-assembly-plugin to package everything into a single JAR:
+    ```bash
+    mvn compile assembly:single
+    ```
 
     *   Run the generated jar or start the main class that launches **ClientServer**, **ManagementServer**, and **NodeServer**.
-
+    ```bash
+    java -jar target/HiveCore-1.0-SNAPSHOT-jar-with-dependencies.jar
+    ```
 * * *
 
 # 4. Architecture & Components
