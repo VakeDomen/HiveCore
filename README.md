@@ -81,7 +81,7 @@ By simplifying connectivity requirements, HiveCore eliminates the need for compl
     
     *   Generate the Fat JAR with Dependencies: Use the maven-assembly-plugin to package everything into a single JAR:
     ```bash
-    mvn compile assembly:single
+    mvn compile assembly:single -f pom.xml
     ```
 
     *   Run the generated jar or start the main class that launches **ClientServer**, **ManagementServer**, and **NodeServer**.
