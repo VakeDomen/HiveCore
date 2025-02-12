@@ -23,7 +23,6 @@ public class Logger {
         String threadName = Thread.currentThread().getName();
         String timestamp = dateFormat.format(new Date());
         String logMessage;
-
         switch (type) {
             case warn -> logMessage = WARN + "[" + timestamp + "][" + threadName + "] Warn: " + RESET + msg;
             case error -> logMessage = ERROR + "[" + timestamp + "][" + threadName + "] Error: " + RESET + msg;
@@ -33,12 +32,11 @@ public class Logger {
             case success -> logMessage = SUCCESS + "[" + timestamp + "][" + threadName + "] Success: " + RESET + msg;
             default -> logMessage = WHITE + "[" + timestamp + "][" + threadName + "] " + msg + RESET;
         }
-
         System.out.println(logMessage);
     }
 
     public static void log(String msg) {
-        log(msg, null);
+        log(msg, LogLevel.success);
     }
 
     public static void warn(String msg) {

@@ -1,4 +1,4 @@
-package upr.famnit.managers;
+package upr.famnit.components;
 
 public enum NodeStatus {
     Valid,

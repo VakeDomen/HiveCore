@@ -1,4 +1,4 @@
-package upr.famnit.managers;
+package upr.famnit.managers.connections;
 
 import upr.famnit.components.*;
 import upr.famnit.util.Logger;
@@ -31,7 +31,7 @@ import java.net.Socket;
  * @see RequestQue
  * @see ResponseFactory
  */
-public class ClientConnectionManager implements Runnable {
+public class Client implements Runnable {
 
     /**
      * The socket representing the client's connection.
@@ -47,7 +47,7 @@ public class ClientConnectionManager implements Runnable {
      * @param clientServer the {@link ServerSocket} to accept incoming client connections
      * @throws IOException if an I/O error occurs when waiting for a connection or accepting it
      */
-    public ClientConnectionManager(ServerSocket clientServer) throws IOException {
+    public Client(ServerSocket clientServer) throws IOException {
         this.clientSocket = clientServer.accept();
     }
 

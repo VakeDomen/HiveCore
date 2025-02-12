@@ -53,24 +53,14 @@ public class NodeData {
     private LocalDateTime lastPing;
 
     /**
-     * The count of consecutive connection exceptions encountered.
-     */
-    private int connectionExceptionCount;
-
-    /**
      * The name of the node.
      */
     private String nodeName;
 
     /**
-     * The version of the Ollama software running on the node.
-     */
-    private String ollamaVersion;
-
-    /**
      * The version of the node software.
      */
-    private String nodeVersion;
+    private WorkerVersion nodeVersion;
 
     /**
      * The current verification status of the node.
@@ -96,7 +86,6 @@ public class NodeData {
      */
     public NodeData() {
         lastPing = LocalDateTime.now();
-        connectionExceptionCount = 0;
         nodeName = null;
         verificationStatus = VerificationStatus.SettingUp;
         nonce = null;
@@ -128,16 +117,6 @@ public class NodeData {
      * @param tags the new tags to be set
      */
     public void tagsTestAndSet(String tags) {
-        statusReadLock.lock();
-        try {
-            boolean same = (this.tags != null) && this.tags.equals(tags);
-            if (same) {
-                return;
-            }
-        } finally {
-            statusReadLock.unlock();
-        }
-
         statusWriteLock.lock();
         try {
             this.tags = tags;
@@ -146,44 +125,6 @@ public class NodeData {
         }
     }
 
-    /**
-     * Increments the count of connection exceptions encountered.
-     *
-     * <p>This method acquires the write lock to ensure exclusive access during the update.</p>
-     */
-    public void incrementExceptionCount() {
-        statusWriteLock.lock();
-        try {
-            this.connectionExceptionCount++;
-        } finally {
-            statusWriteLock.unlock();
-        }
-    }
-
-    /**
-     * Resets the connection exception count to zero if it is not already zero.
-     *
-     * <p>This method first acquires the read lock to check if the exception count is non-zero.
-     * If it is, it acquires the write lock to reset the count.</p>
-     */
-    public void resetExceptionCount() {
-        statusReadLock.lock();
-        try {
-            boolean shouldChange = connectionExceptionCount != 0;
-            if (!shouldChange) {
-                return;
-            }
-        } finally {
-            statusReadLock.unlock();
-        }
-
-        statusWriteLock.lock();
-        try {
-            this.connectionExceptionCount = 0;
-        } finally {
-            statusWriteLock.unlock();
-        }
-    }
 
     /**
      * Sets the name of the node.
@@ -244,22 +185,6 @@ public class NodeData {
         statusReadLock.lock();
         try {
             return lastPing;
-        } finally {
-            statusReadLock.unlock();
-        }
-    }
-
-    /**
-     * Retrieves the count of connection exceptions encountered.
-     *
-     * <p>This method acquires the read lock to ensure thread-safe access to the field.</p>
-     *
-     * @return the current connection exception count
-     */
-    public int getConnectionExceptionCount() {
-        statusReadLock.lock();
-        try {
-            return connectionExceptionCount;
         } finally {
             statusReadLock.unlock();
         }
@@ -330,50 +255,18 @@ public class NodeData {
     }
 
     /**
-     * Sets the Ollama software version running on the node.
-     *
-     * <p>This method acquires the write lock to ensure exclusive access during the update.</p>
-     *
-     * @param version the new Ollama version
-     */
-    public void setOllamaVersion(String version) {
-        statusWriteLock.lock();
-        try {
-            this.ollamaVersion = version;
-        } finally {
-            statusWriteLock.unlock();
-        }
-    }
-
-    /**
      * Sets the node software version.
      *
      * <p>This method acquires the write lock to ensure exclusive access during the update.</p>
      *
      * @param nodeVersion the new node version
      */
-    public void setNodeVersion(String nodeVersion) {
+    public void setNodeVersion(WorkerVersion nodeVersion) {
         statusWriteLock.lock();
         try {
             this.nodeVersion = nodeVersion;
         } finally {
             statusWriteLock.unlock();
-        }
-    }
-
-    /**
-     * Retrieves the Ollama software version running on the node.
-     *
-     * <p>This method acquires the read lock to ensure thread-safe access to the field.</p>
-     *
-     * @return the Ollama version, or {@code null} if not set
-     */
-    public String getOllamaVersion() {
-        statusReadLock.lock();
-        try {
-            return ollamaVersion;
-        } finally {
-            statusReadLock.unlock();
         }
     }
 
@@ -384,7 +277,7 @@ public class NodeData {
      *
      * @return the node version, or {@code null} if not set
      */
-    public String getNodeVersion() {
+    public WorkerVersion getNodeVersion() {
         statusReadLock.lock();
         try {
             return nodeVersion;

@@ -1,6 +1,6 @@
 package upr.famnit.network;
 
-import upr.famnit.managers.ProxyManager;
+import upr.famnit.managers.connections.Management;
 import upr.famnit.util.Logger;
 
 import java.io.IOException;
@@ -18,7 +18,7 @@ import static upr.famnit.util.Config.MANAGEMENT_CONNECTION_PORT;
  * <p>This class extends {@link Thread} and utilizes an {@link ExecutorService} to handle multiple management
  * connections concurrently. It continuously listens for new management connections on the configured
  * management connection port and submits each accepted connection to the thread pool for processing by
- * {@link ProxyManager}.</p>
+ * {@link Management}.</p>
  *
  * <p>Thread safety is ensured through the use of thread pools and proper exception handling, ensuring that
  * the server remains robust and responsive under high-load scenarios.</p>
@@ -26,7 +26,7 @@ import static upr.famnit.util.Config.MANAGEMENT_CONNECTION_PORT;
  * <p>Instances of {@code ManagementServer} are intended to run indefinitely, managing the lifecycle of
  * management connections until the application is terminated.</p>
  *
- * @see ProxyManager
+ * @see Management
  * @see ExecutorService
  * @see Executors
  */
@@ -70,7 +70,7 @@ public class ManagementServer extends Thread {
      *     <li>Sets the current thread's name to "ManagementServer" for easier identification in logs.</li>
      *     <li>Logs a message indicating that the management connection server is running and listening on the configured port.</li>
      *     <li>Enters an infinite loop to continuously accept and handle incoming management connections.</li>
-     *     <li>For each accepted connection, creates a {@link ProxyManager} and submits it to the thread pool for execution.</li>
+     *     <li>For each accepted connection, creates a {@link Management} and submits it to the thread pool for execution.</li>
      *     <li>Logs any {@link IOException} that occurs during the acceptance of management connections.</li>
      * </ol>
      * </p>
@@ -85,7 +85,7 @@ public class ManagementServer extends Thread {
         while (true) {
             try {
                 Socket clientSocket = serverSocket.accept();
-                executorService.execute(new ProxyManager(clientSocket));
+                executorService.execute(new Management(clientSocket));
             } catch (IOException e) {
                 Logger.error("Something went wrong accepting management connection: " + e.getMessage());
             }

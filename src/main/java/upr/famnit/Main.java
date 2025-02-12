@@ -3,7 +3,7 @@ package upr.famnit;
 import upr.famnit.managers.DatabaseManager;
 import upr.famnit.network.ClientServer;
 import upr.famnit.network.ManagementServer;
-import upr.famnit.network.NodeServer;
+import upr.famnit.network.WorkerServer;
 import upr.famnit.util.Config;
 import upr.famnit.util.Logger;
 
@@ -17,18 +17,18 @@ public class Main {
             Config.init();
             DatabaseManager.createKeysTable();
 
-            NodeServer nodeServer = new NodeServer();
+            WorkerServer workerServer = new WorkerServer();
             ClientServer clientServer = new ClientServer();
             ManagementServer managementServer = new ManagementServer();
 
-            nodeServer.start();
+            workerServer.start();
             clientServer.start();
             managementServer.start();
 
 
 
 
-            nodeServer.join();
+            workerServer.join();
             clientServer.join();
             managementServer.join();
 

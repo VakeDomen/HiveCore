@@ -1,11 +1,10 @@
 package upr.famnit.network;
 
-import upr.famnit.managers.ClientConnectionManager;
+import upr.famnit.managers.connections.Client;
 import upr.famnit.util.Logger;
 
 import java.io.IOException;
 import java.net.ServerSocket;
-import java.net.Socket;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -17,7 +16,7 @@ import static upr.famnit.util.Config.PROXY_PORT;
  *
  * <p>This class extends {@link Thread} and utilizes an {@link ExecutorService} to handle multiple client
  * connections concurrently. It continuously listens for new client connections on the configured proxy
- * port and submits each accepted connection to the thread pool for processing by {@link ClientConnectionManager}.</p>
+ * port and submits each accepted connection to the thread pool for processing by {@link Client}.</p>
  *
  * <p>Thread safety is ensured through the use of thread pools and proper exception handling, ensuring that
  * the server remains robust and responsive under high-load scenarios.</p>
@@ -25,7 +24,7 @@ import static upr.famnit.util.Config.PROXY_PORT;
  * <p>Instances of {@code ClientServer} are intended to run indefinitely, managing the lifecycle of client
  * connections until the application is terminated.</p>
  *
- * @see ClientConnectionManager
+ * @see Client
  * @see ExecutorService
  * @see Executors
  */
@@ -69,7 +68,7 @@ public class ClientServer extends Thread {
      *     <li>Sets the current thread's name to "ClientServer" for easier identification in logs.</li>
      *     <li>Logs a message indicating that the proxy server is running and listening on the configured port.</li>
      *     <li>Enters an infinite loop to continuously accept and handle incoming client connections.</li>
-     *     <li>For each accepted connection, creates a {@link ClientConnectionManager} and submits it to the thread pool for execution.</li>
+     *     <li>For each accepted connection, creates a {@link Client} and submits it to the thread pool for execution.</li>
      *     <li>Logs any {@link IOException} that occurs during the acceptance of client connections.</li>
      * </ol>
      * </p>
@@ -83,7 +82,7 @@ public class ClientServer extends Thread {
 
         while (true) {
             try {
-                ClientConnectionManager connection = new ClientConnectionManager(serverSocket);
+                Client connection = new Client(serverSocket);
                 requestThreadExecutor.submit(connection);
             } catch (IOException e) {
                 Logger.error("Something went wrong accepting client connection: " + e.getMessage());

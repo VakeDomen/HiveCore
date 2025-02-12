@@ -1,4 +1,4 @@
-package upr.famnit.managers;
+package upr.famnit.managers.connections;
 
 import upr.famnit.authentication.KeyUtil;
 import upr.famnit.authentication.VerificationStatus;
@@ -41,7 +41,7 @@ import java.util.List;
  * @see VerificationStatus
  * @see VerificationType
  */
-public class NodeConnectionManager extends Thread {
+public class Worker extends Thread {
 
     /**
      * The {@link Connection} object representing the communication link with the worker node.
@@ -68,7 +68,7 @@ public class NodeConnectionManager extends Thread {
      * @param nodeServerSocket the {@link ServerSocket} listening for node connections
      * @throws IOException if an I/O error occurs when accepting the connection
      */
-    public NodeConnectionManager(ServerSocket nodeServerSocket) throws IOException {
+    public Worker(ServerSocket nodeServerSocket) throws IOException {
         Socket socket = nodeServerSocket.accept();
         connection = new Connection(socket);
         data = new NodeData();
@@ -110,7 +110,6 @@ public class NodeConnectionManager extends Thread {
 
             try {
                 handleRequest(request);
-                data.resetExceptionCount();
             } catch (IOException e) {
                 handleHandlingException(request, e);
             }
@@ -198,9 +197,12 @@ public class NodeConnectionManager extends Thread {
      */
     private void waitForAuthRequestAndValidate() throws IOException, InterruptedException {
         Request request = connection.waitForRequest();
+        Logger.log("Recieved message...");
+
         if (!"HIVE".equals(request.getProtocol()) || !"AUTH".equals(request.getMethod())) {
             throw new IOException("First message should be authentication");
         }
+        Logger.log("Recieved auth message. Verifying...");
 
         String[] authenticationData = request.getUri().split(";");
         if (authenticationData.length != 4) {
@@ -223,7 +225,7 @@ public class NodeConnectionManager extends Thread {
         data.setOllamaVersion(ollamaVersion);
         Thread.currentThread().setName(data.getNodeName());
 
-        // Wait for any additional verification processes (if applicable)
+
         while (data.getVerificationStatus() == VerificationStatus.Waiting) {
             Thread.sleep(50);
         }

@@ -70,7 +70,7 @@ By simplifying connectivity requirements, HiveCore eliminates the need for compl
 
 3.  **Set Up the Database**
 
-    *   By default, HiveCore uses SQLite. Ensure your environment is capable of running SQLite. The SQLite database will be created automatically on the fist run of HiveCore. The location of the sqlite db file is configured in the `Config`.
+    *   By default, HiveCore uses SQLite. Ensure your environment is capable of running SQLite. The SQLite database will be created automatically on the fist run of HiveCore.
 4. **Build & Run**
 
     *   Use Maven to clean and compile the project:

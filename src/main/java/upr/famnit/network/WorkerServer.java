@@ -1,7 +1,7 @@
 package upr.famnit.network;
 
-import upr.famnit.managers.NodeConnectionManager;
-import upr.famnit.managers.NodeConnectionMonitor;
+import upr.famnit.managers.connections.Worker;
+import upr.famnit.managers.Overseer;
 import upr.famnit.util.Logger;
 
 import java.io.IOException;
@@ -18,7 +18,7 @@ import static upr.famnit.util.Config.NODE_CONNECTION_PORT;
  * <p>This class extends {@link Thread} and utilizes an {@link ExecutorService} to handle multiple worker
  * node connections concurrently. It continuously listens for new worker connections on the configured
  * node connection port and submits each accepted connection to the thread pool for processing by
- * {@link NodeConnectionManager}. Additionally, it monitors active node connections using {@link NodeConnectionMonitor}.</p>
+ * {@link Worker}. Additionally, it monitors active node connections using {@link Overseer}.</p>
  *
  * <p>Thread safety is ensured through the use of thread pools and proper exception handling, ensuring that
  * the server remains robust and responsive under high-load scenarios.</p>
@@ -26,12 +26,12 @@ import static upr.famnit.util.Config.NODE_CONNECTION_PORT;
  * <p>Instances of {@code NodeServer} are intended to run indefinitely, managing the lifecycle of worker
  * node connections until the application is terminated.</p>
  *
- * @see NodeConnectionManager
- * @see NodeConnectionMonitor
+ * @see Worker
+ * @see Overseer
  * @see ExecutorService
  * @see Executors
  */
-public class NodeServer extends Thread {
+public class WorkerServer extends Thread {
 
     /**
      * The {@link ExecutorService} responsible for managing a pool of threads that handle worker node connections.
@@ -47,9 +47,9 @@ public class NodeServer extends Thread {
     private final ServerSocket serverSocket;
 
     /**
-     * The {@link NodeConnectionMonitor} that tracks active worker node connections.
+     * The {@link Overseer} that tracks active worker node connections.
      */
-    private final NodeConnectionMonitor monitor;
+    private final Overseer monitor;
 
     /**
      * Constructs a new {@code NodeServer} instance by initializing the server socket, connection monitor,
@@ -58,16 +58,16 @@ public class NodeServer extends Thread {
      * <p>This constructor performs the following actions:
      * <ol>
      *     <li>Initializes the {@link ServerSocket} to listen on the configured {@code NODE_CONNECTION_PORT}.</li>
-     *     <li>Creates a new instance of {@link NodeConnectionMonitor} to monitor active connections.</li>
+     *     <li>Creates a new instance of {@link Overseer} to monitor active connections.</li>
      *     <li>Creates a cached thread pool using {@link Executors#newCachedThreadPool()} to manage worker handlers.</li>
      * </ol>
      * </p>
      *
      * @throws IOException if an I/O error occurs when opening the server socket
      */
-    public NodeServer() throws IOException {
+    public WorkerServer() throws IOException {
         this.serverSocket = new ServerSocket(NODE_CONNECTION_PORT);
-        this.monitor = new NodeConnectionMonitor();
+        this.monitor = new Overseer();
         this.workerPool = Executors.newCachedThreadPool();
     }
 
@@ -77,10 +77,10 @@ public class NodeServer extends Thread {
      * <p>This method performs the following actions:
      * <ol>
      *     <li>Sets the current thread's name to "WorkerServer" for easier identification in logs.</li>
-     *     <li>Starts the {@link NodeConnectionMonitor} to begin tracking active worker connections.</li>
+     *     <li>Starts the {@link Overseer} to begin tracking active worker connections.</li>
      *     <li>Logs a message indicating that the worker connection server is running and listening on the configured port.</li>
      *     <li>Enters an infinite loop to continuously accept and handle incoming worker node connections.</li>
-     *     <li>For each accepted connection, creates a {@link NodeConnectionManager}, submits it to the thread pool for execution, and adds it to the monitor.</li>
+     *     <li>For each accepted connection, creates a {@link Worker}, submits it to the thread pool for execution, and adds it to the monitor.</li>
      *     <li>Logs any {@link IOException} that occurs during the acceptance of worker connections.</li>
      * </ol>
      * </p>
@@ -95,7 +95,7 @@ public class NodeServer extends Thread {
 
         while (true) {
             try {
-                NodeConnectionManager nodeConnection = new NodeConnectionManager(serverSocket);
+                Worker nodeConnection = new Worker(serverSocket);
                 workerPool.submit(nodeConnection);
                 this.monitor.addNode(nodeConnection);
             } catch (IOException e) {
@@ -112,7 +112,7 @@ public class NodeServer extends Thread {
      * <ol>
      *     <li>Closes the {@link ServerSocket} to stop accepting new worker connections.</li>
      *     <li>Initiates an orderly shutdown of the {@link ExecutorService}, allowing existing tasks to complete.</li>
-     *     <li>Stops the {@link NodeConnectionMonitor} to cease tracking active connections.</li>
+     *     <li>Stops the {@link Overseer} to cease tracking active connections.</li>
      * </ol>
      * </p>
      *

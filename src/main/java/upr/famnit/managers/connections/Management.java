@@ -1,15 +1,15 @@
-package upr.famnit.managers;
+package upr.famnit.managers.connections;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import upr.famnit.authentication.*;
 import upr.famnit.components.*;
+import upr.famnit.managers.DatabaseManager;
+import upr.famnit.managers.Overseer;
 import upr.famnit.util.Logger;
 import upr.famnit.util.StreamUtil;
 
-import javax.security.sasl.AuthenticationException;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
@@ -36,9 +36,9 @@ import java.util.*;
  * @see ClientRequest
  * @see Connection
  * @see DatabaseManager
- * @see NodeConnectionMonitor
+ * @see Overseer
  */
-public class ProxyManager implements Runnable {
+public class Management implements Runnable {
 
     /**
      * The {@link Socket} representing the connection to the management client.
@@ -58,7 +58,7 @@ public class ProxyManager implements Runnable {
      *
      * @param clientSocket the {@link Socket} connected to the management client
      */
-    public ProxyManager(Socket clientSocket) {
+    public Management(Socket clientSocket) {
         this.clientSocket = clientSocket;
     }
 
@@ -100,8 +100,7 @@ public class ProxyManager implements Runnable {
                 case "/worker/status" -> handleWorkerStatusRoute();
                 case "/worker/pings" -> handleWorkerPingsRoute();
                 case "/worker/tags" -> handleWorkerTagsRoute();
-                case "/worker/version/hive" -> handleWorkerHiveVersionRoute();
-                case "/worker/version/ollama" -> handleWorkerOllamaVersionRoute();
+                case "/worker/versions" -> handleWorkerHiveVersionRoute();
                 case "/queue" -> handleQueueRoute();
                 case null, default -> respond(ResponseFactory.NotFound());
             }
@@ -202,18 +201,6 @@ public class ProxyManager implements Runnable {
     }
 
     /**
-     * Handles requests to the "/worker/version/ollama" route, providing the Ollama versions of active workers.
-     *
-     * @throws IOException if an I/O error occurs during response transmission
-     */
-    private void handleWorkerOllamaVersionRoute() throws IOException {
-        switch (clientRequest.getRequest().getMethod()) {
-            case "GET" -> handleWorkersOllamaVersionRequest();
-            case null, default -> respond(ResponseFactory.NotFound());
-        }
-    }
-
-    /**
      * Handles GET requests to retrieve the current length of the request queue.
      *
      * @throws IOException if an I/O error occurs during response transmission
@@ -231,7 +218,7 @@ public class ProxyManager implements Runnable {
      * @throws IOException if an I/O error occurs during response transmission
      */
     private void handleActiveWorkersConnectionRequest() throws IOException {
-        TreeMap<String, Integer> activeConnections = NodeConnectionMonitor.getActiveConnections();
+        TreeMap<String, Integer> activeConnections = Overseer.getActiveConnections();
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         String body = gson.toJson(activeConnections);
         respond(ResponseFactory.Ok(body.getBytes(StandardCharsets.UTF_8)));
@@ -243,7 +230,7 @@ public class ProxyManager implements Runnable {
      * @throws IOException if an I/O error occurs during response transmission
      */
     private void handleActiveWorkersStatusRequest() throws IOException {
-        TreeMap<String, ArrayList<VerificationStatus>> activeStatuses = NodeConnectionMonitor.getConnectionsStatus();
+        TreeMap<String, ArrayList<VerificationStatus>> activeStatuses = Overseer.getConnectionsStatus();
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         String body = gson.toJson(activeStatuses);
         respond(ResponseFactory.Ok(body.getBytes(StandardCharsets.UTF_8)));
@@ -255,7 +242,7 @@ public class ProxyManager implements Runnable {
      * @throws IOException if an I/O error occurs during response transmission
      */
     private void handleActiveWorkersPingsRequest() throws IOException {
-        TreeMap<String, ArrayList<String>> lastPings = NodeConnectionMonitor.getLastPings();
+        TreeMap<String, ArrayList<String>> lastPings = Overseer.getLastPings();
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         String body = gson.toJson(lastPings);
         respond(ResponseFactory.Ok(body.getBytes(StandardCharsets.UTF_8)));
@@ -267,35 +254,24 @@ public class ProxyManager implements Runnable {
      * @throws IOException if an I/O error occurs during response transmission
      */
     private void handleActiveWorkersTagsRequest() throws IOException {
-        TreeMap<String, Set<String>> tags = NodeConnectionMonitor.getTags();
+        TreeMap<String, Set<String>> tags = Overseer.getTags();
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         String body = gson.toJson(tags);
         respond(ResponseFactory.Ok(body.getBytes(StandardCharsets.UTF_8)));
     }
 
     /**
-     * Handles GET requests to retrieve the Hive versions of active workers.
+     * Handles GET requests to retrieve the Hive and Ollama versions of active workers.
      *
      * @throws IOException if an I/O error occurs during response transmission
      */
     private void handleWorkersHiveVersionRequest() throws IOException {
-        TreeMap<String, Set<String>> hiveVersions = NodeConnectionMonitor.getNodeVersions();
+        TreeMap<String, WorkerVersion> hiveVersions = Overseer.getNodeVersions();
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         String body = gson.toJson(hiveVersions);
         respond(ResponseFactory.Ok(body.getBytes(StandardCharsets.UTF_8)));
     }
 
-    /**
-     * Handles GET requests to retrieve the Ollama versions of active workers.
-     *
-     * @throws IOException if an I/O error occurs during response transmission
-     */
-    private void handleWorkersOllamaVersionRequest() throws IOException {
-        TreeMap<String, Set<String>> ollamaVersions = NodeConnectionMonitor.getOllamaVersions();
-        Gson gson = new GsonBuilder().setPrettyPrinting().create();
-        String body = gson.toJson(ollamaVersions);
-        respond(ResponseFactory.Ok(body.getBytes(StandardCharsets.UTF_8)));
-    }
 
     /**
      * Handles POST requests to insert a new authentication key into the system.

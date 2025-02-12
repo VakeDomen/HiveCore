@@ -1,14 +1,12 @@
 package upr.famnit.managers;
 
 import upr.famnit.authentication.VerificationStatus;
-import upr.famnit.components.ClientRequest;
-import upr.famnit.components.RequestQue;
-import upr.famnit.components.ResponseFactory;
+import upr.famnit.components.*;
+import upr.famnit.managers.connections.Worker;
 import upr.famnit.util.Logger;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.net.Socket;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -38,12 +36,12 @@ import upr.famnit.util.StreamUtil;
  * continuously overseeing the health and performance of worker node connections until the
  * application is terminated.</p>
  *
- * @see NodeConnectionManager
+ * @see Worker
  * @see ClientRequest
  * @see RequestQue
  * @see VerificationStatus
  */
-public class NodeConnectionMonitor extends Thread {
+public class Overseer extends Thread {
 
     /**
      * Flag indicating whether the monitor is active and should continue running.
@@ -52,11 +50,11 @@ public class NodeConnectionMonitor extends Thread {
     private volatile boolean monitoring = true;
 
     /**
-     * A synchronized list of active {@link NodeConnectionManager} instances representing connected worker nodes.
+     * A synchronized list of active {@link Worker} instances representing connected worker nodes.
      *
      * <p>Access to this list is controlled via the {@code nodeLock} object to ensure thread safety.</p>
      */
-    private static volatile ArrayList<NodeConnectionManager> nodes = new ArrayList<>();
+    private static volatile ArrayList<Worker> nodes = new ArrayList<>();
 
     /**
      * An object used as a lock for synchronizing access to the {@code nodes} list.
@@ -68,7 +66,7 @@ public class NodeConnectionMonitor extends Thread {
      *
      * <p>Initializes the {@code nodes} list to ensure it's ready for managing worker connections.</p>
      */
-    public NodeConnectionMonitor() {
+    public Overseer() {
         nodes = new ArrayList<>();
     }
 
@@ -87,7 +85,7 @@ public class NodeConnectionMonitor extends Thread {
      */
     @Override
     public void run() {
-        Thread.currentThread().setName("Monitor");
+        Thread.currentThread().setName("Overseer");
         Logger.status("Monitor starting...");
         while (monitoring) {
             synchronized (nodeLock) {
@@ -122,9 +120,9 @@ public class NodeConnectionMonitor extends Thread {
      * <p>Nodes that fail any of these checks are closed and removed from the active list.</p>
      */
     private void checkOnWorkers() {
-        ArrayList<NodeConnectionManager> toRemove = new ArrayList<>();
+        ArrayList<Worker> toRemove = new ArrayList<>();
 
-        for (NodeConnectionManager node : nodes) {
+        for (Worker node : nodes) {
             NodeStatus status = checkNode(node);
 
             // Stop connection if violated any rules
@@ -135,7 +133,7 @@ public class NodeConnectionMonitor extends Thread {
             }
         }
 
-        for (NodeConnectionManager nodeToRemove : toRemove) {
+        for (Worker nodeToRemove : toRemove) {
             nodes.remove(nodeToRemove);
         }
     }
@@ -151,10 +149,10 @@ public class NodeConnectionMonitor extends Thread {
      * </ul>
      * </p>
      *
-     * @param node the {@link NodeConnectionManager} representing the worker node to be checked
+     * @param node the {@link Worker} representing the worker node to be checked
      * @return the {@link NodeStatus} indicating the result of the check
      */
-    private NodeStatus checkNode(NodeConnectionManager node) {
+    private NodeStatus checkNode(Worker node) {
         if (!node.isConnectionOpen()) {
             return NodeStatus.Closed;
         }
@@ -207,14 +205,14 @@ public class NodeConnectionMonitor extends Thread {
      * </ul>
      * </p>
      *
-     * @param node the {@link NodeConnectionManager} representing the worker node to be verified
+     * @param node the {@link Worker} representing the worker node to be verified
      * @return the {@link NodeStatus} indicating the result of the verification
      */
-    private NodeStatus verifyKeyAndNonce(NodeConnectionManager node) {
+    private NodeStatus verifyKeyAndNonce(Worker node) {
         String nodeName = node.getData().getNodeName();
         String nodeNonce = node.getData().getNonce();
 
-        for (NodeConnectionManager existingNode : nodes) {
+        for (Worker existingNode : nodes) {
             if (existingNode.getData().getVerificationStatus() != VerificationStatus.Verified) {
                 continue;
             }
@@ -248,7 +246,7 @@ public class NodeConnectionMonitor extends Thread {
         Set<String> modelNames = new HashSet<>();
 
         synchronized (nodeLock) {
-            for (NodeConnectionManager node : nodes) {
+            for (Worker node : nodes) {
                 nodeNames.add(node.getName());
                 modelNames.addAll(node.getTags());
             }
@@ -270,13 +268,13 @@ public class NodeConnectionMonitor extends Thread {
     }
 
     /**
-     * Adds a new {@link NodeConnectionManager} to the list of monitored nodes.
+     * Adds a new {@link Worker} to the list of monitored nodes.
      *
      * <p>This method ensures that the addition is thread-safe by synchronizing on the {@code nodeLock}.</p>
      *
-     * @param manager the {@link NodeConnectionManager} instance representing the worker node to be added
+     * @param manager the {@link Worker} instance representing the worker node to be added
      */
-    public void addNode(NodeConnectionManager manager) {
+    public void addNode(Worker manager) {
         synchronized (nodeLock) {
             nodes.add(manager);
         }
@@ -299,7 +297,7 @@ public class NodeConnectionMonitor extends Thread {
     public static TreeMap<String, Integer> getActiveConnections() {
         TreeMap<String, Integer> connectedNodes = new TreeMap<>();
         synchronized (nodeLock) {
-            for (NodeConnectionManager node : nodes) {
+            for (Worker node : nodes) {
                 String name = node.getData().getNodeName();
                 if (name == null) {
                     name = "Unauthenticated";
@@ -319,7 +317,7 @@ public class NodeConnectionMonitor extends Thread {
     public static TreeMap<String, ArrayList<VerificationStatus>> getConnectionsStatus() {
         TreeMap<String, ArrayList<VerificationStatus>> connectedNodes = new TreeMap<>();
         synchronized (nodeLock) {
-            for (NodeConnectionManager node : nodes) {
+            for (Worker node : nodes) {
                 String name = node.getData().getNodeName();
                 if (name == null) {
                     name = "Unauthenticated";
@@ -339,7 +337,7 @@ public class NodeConnectionMonitor extends Thread {
     public static TreeMap<String, ArrayList<String>> getLastPings() {
         TreeMap<String, ArrayList<String>> connectedNodes = new TreeMap<>();
         synchronized (nodeLock) {
-            for (NodeConnectionManager node : nodes) {
+            for (Worker node : nodes) {
                 String name = node.getData().getNodeName();
                 if (name == null) {
                     continue;
@@ -359,7 +357,7 @@ public class NodeConnectionMonitor extends Thread {
     public static TreeMap<String, Set<String>> getTags() {
         TreeMap<String, Set<String>> connectedNodes = new TreeMap<>();
         synchronized (nodeLock) {
-            for (NodeConnectionManager node : nodes) {
+            for (Worker node : nodes) {
                 String name = node.getData().getNodeName();
                 if (name == null) {
                     continue;
@@ -372,48 +370,23 @@ public class NodeConnectionMonitor extends Thread {
     }
 
     /**
-     * Retrieves the Ollama versions of all active connections, mapping node names to their respective version sets.
-     *
-     * @return a {@link TreeMap} mapping node names to a set of their Ollama versions
-     */
-    public static TreeMap<String, Set<String>> getOllamaVersions() {
-        TreeMap<String, Set<String>> connectedNodes = new TreeMap<>();
-        synchronized (nodeLock) {
-            for (NodeConnectionManager node : nodes) {
-                String name = node.getData().getNodeName();
-                if (name == null) {
-                    continue;
-                }
-                connectedNodes.putIfAbsent(name, new HashSet<>());
-                String version = node.getData().getOllamaVersion();
-                if (version == null) {
-                    version = "Unknown";
-                }
-                connectedNodes.get(name).add(version);
-            }
-        }
-        return connectedNodes;
-    }
-
-    /**
      * Retrieves the node versions of all active connections, mapping node names to their respective version sets.
      *
      * @return a {@link TreeMap} mapping node names to a set of their node versions
      */
-    public static TreeMap<String, Set<String>> getNodeVersions() {
-        TreeMap<String, Set<String>> connectedNodes = new TreeMap<>();
+    public static TreeMap<String, WorkerVersion> getNodeVersions() {
+        TreeMap<String, WorkerVersion> connectedNodes = new TreeMap<>();
         synchronized (nodeLock) {
-            for (NodeConnectionManager node : nodes) {
+            for (Worker node : nodes) {
                 String name = node.getData().getNodeName();
                 if (name == null) {
                     continue;
                 }
-                connectedNodes.putIfAbsent(name, new HashSet<>());
-                String version = node.getData().getNodeVersion();
+                WorkerVersion version = node.getData().getNodeVersion();
                 if (version == null) {
-                    version = "Unknown";
+                    version = new WorkerVersion("Unknown", "Unknown");
                 }
-                connectedNodes.get(name).add(version);
+                connectedNodes.put(name, version);
             }
         }
         return connectedNodes;

@@ -138,19 +138,19 @@ public class Connection {
      */
     public boolean close() {
         synchronized (socketLock) {
-            synchronized (stateLock) {
-                try {
-                    connectionOpen = false;
-                    streamFromNode.close();
-                    streamToNode.close();
-                    nodeSocket.close();
-                    return true;
-                } catch (IOException e) {
-                    Logger.error("Failed to close connection: " + e.getMessage());
-                    return false;
-                }
+            try {
+                streamFromNode.close();
+                streamToNode.close();
+                nodeSocket.close();
+                connectionOpen = false;
+                return true;
+
+            } catch (IOException e) {
+                Logger.error("Failed to close connection: " + e.getMessage());
+                return false;
             }
         }
+
     }
 
     /**
