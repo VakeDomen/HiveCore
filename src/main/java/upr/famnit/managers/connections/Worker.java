@@ -211,7 +211,7 @@ public class Worker extends Thread {
 
         String key = authenticationData[0];
         String nonce = authenticationData[1];
-        String nodeVersion = authenticationData[2];
+        String hiveVersion = authenticationData[2];
         String ollamaVersion = authenticationData[3];
 
         if (!KeyUtil.verifyKey(key, VerificationType.NodeConnection)) {
@@ -221,8 +221,7 @@ public class Worker extends Thread {
         data.setNonce(nonce);
         data.setNodeName(KeyUtil.nameKey(key));
         data.setVerificationStatus(VerificationStatus.Waiting);
-        data.setNodeVersion(nodeVersion);
-        data.setOllamaVersion(ollamaVersion);
+        data.setNodeVersion(new WorkerVersion(hiveVersion, ollamaVersion));
         Thread.currentThread().setName(data.getNodeName());
 
 
