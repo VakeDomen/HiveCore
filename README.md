@@ -6,7 +6,7 @@
 
 # HiveCore
 
-HiveCore is a proxy solution designed to unify scattered machines running [Ollama](https://github.com/ollama/ollama) into a single, cohesive API. Whether you have multiple nodes each capable of Ollama inference or want a centralized gateway for distributing client requests, HiveCore helps you coordinate, monitor, and manage these worker nodes with ease.
+HiveCore is a proxy solution designed to unify scattered machines running [Ollama](https://github.com/ollama/ollama) and [HiveNode](http://github.com/VakeDomen/HiveNode) into a single, cohesive API. Whether you have multiple nodes each capable of Ollama inference or want a centralized gateway for distributing client requests, HiveCore helps you coordinate, monitor, and manage these worker nodes with ease.
 
 One of HiveCore's standout features is its flexibility with network visibility. Worker machines don’t need to be publicly accessible or on the same network as the proxy server. As long as the workers can establish an outgoing connection to the proxy, they can seamlessly integrate into the system. This means you can deploy worker nodes in diverse locations—cloud servers, private data centers, the machine in your living room, or even behind firewalls—and HiveCore will bring them together into a unified API.
 
