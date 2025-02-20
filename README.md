@@ -20,8 +20,9 @@ By simplifying connectivity requirements, HiveCore eliminates the need for compl
 4.  [**Architecture & Components**](#4-architecture--components)
 5.  [**Usage & Configuration**](#5-usage--configuration)
 6.  [**API Endpoints & Integration**](#6-api-endpoints--integration)
-7.  [**Contributing**](#7-contributing)
-8.  [**License**](#8-license)
+7.  [**Connecting workers**](#7-connecting-workers)
+8.  [**Contributing**](#8-contributing)
+9.  [**License**](#9-license)
 
 * * *
 
@@ -30,82 +31,65 @@ By simplifying connectivity requirements, HiveCore eliminates the need for compl
 
 **HiveCore** aims to streamline the process of distributing Ollama inference requests across multiple worker nodes. By acting as a proxy, HiveCore allows you to:
 
-*   **Centralize** client requests into one API endpoint, simplifying how your users interact with Ollama across various machines.
-*   **Authenticate** and **manage** nodes, optionally ensuring only verified systems can participate.
-*   **Distribute** requests to available nodes, balancing load for optimal performance.
-*   **Monitor** and **manage** keys, queues, and node statuses through HTTP endpoints.
+- **Centralize** client requests into one API endpoint, simplifying how your users interact with Ollama across various machines.
+- **Authenticate** and **manage** nodes, optionally ensuring only verified systems can participate.
+- **Distribute** requests to available nodes, balancing load for optimal performance.
+- **Monitor** and **manage** keys, queues, and node statuses through HTTP endpoints.
 
 * * *
 
 # 2. Key Features
-
-
-*   **Ollama Proxy & Load Distribution**  
+- **Ollama Proxy & Load Distribution**  
     Collect all your Ollama-ready machines under one unified API to handle inference requests.
-
-*   **Node Management & Monitoring**  
+- **Node Management & Monitoring**  
     Keep track of connected worker nodes, verifying their status, ping times, and capabilities.
-
-*   **Queue Management**  
+- **Queue Management**  
     Incoming requests are queued and served as worker nodes become available, ensuring a smooth, organized flow of tasks.
-
-*   **Administrative API**  
+- **Administrative API**  
     A suite of administrative endpoints for listing or inserting keys, inspecting worker nodes, and monitoring queue lengths.
-
-*   **SQLite Integration**  
+- **SQLite Integration**  
     Authentication keys (and potentially more metadata) are stored and managed in a local SQLite database by default.
 
 
 * * *
 
 # 3. Getting Started
-
-
 1.  **Clone the Project**
-
     ```bash
     git clone https://github.com/VakeDomen/HiveCore.git
     cd HiveCore
     ```
-
 3.  **Set Up the Database**
-
-    *   By default, HiveCore uses SQLite. Ensure your environment is capable of running SQLite. The SQLite database will be created automatically on the fist run of HiveCore.
+    - By default, HiveCore uses SQLite. Ensure your environment is capable of running SQLite. The SQLite database will be created automatically on the fist run of HiveCore.
 4. **Build & Run**
 
-    *   Use Maven to clean and compile the project:
+    - Use Maven to clean and compile the project:
     Run the Maven lifecycle to clean and compile the project:
     ```bash
     mvn clean compile
     ```
-    
-    *   Generate the Fat JAR with Dependencies: Use the maven-assembly-plugin to package everything into a single JAR:
+    - Generate the Fat JAR with Dependencies: Use the maven-assembly-plugin to package everything into a single JAR:
     ```bash
     mvn compile assembly:single -f pom.xml
     ```
-
-    *   Run the generated jar or start the main class that launches **ClientServer**, **ManagementServer**, and **NodeServer**.
+    - Run the generated jar or start the main class that launches **ClientServer**, **ManagementServer**, and **NodeServer**.
     ```bash
     java -jar target/HiveCore-1.0-SNAPSHOT-jar-with-dependencies.jar
     ```
+   
 * * *
 
 # 4. Architecture & Components
 
-
-*   **NodeServer**  
+- **NodeServer**  
     Listens for worker node connections running Ollama. Each node is required to authenticate. Once authenticated, tasks can be dispatched to it.
-
-*   **ClientServer**  
+- **ClientServer**  
     Receives client requests for Ollama inference. These requests are placed in a queue and assigned to worker nodes as they become available.
-
-*   **ManagementServer**  
+- **ManagementServer**  
     Provides administrative endpoints for managing keys, viewing queue lengths, and checking node statuses.
-
-*   **NodeConnectionMonitor**  
+- **NodeConnectionMonitor**  
     Periodically checks all connected nodes for timeouts or verification issues, removing inactive or unauthorized connections.
-
-*   **DatabaseManager**  
+- **DatabaseManager**  
     Handles key storage in SQLite, offering CRUD operations for authentication keys.
 
 
@@ -114,25 +98,43 @@ By simplifying connectivity requirements, HiveCore eliminates the need for compl
 # 5. Usage & Configuration
 
 1.  **Configuration File**
-    * When the HiveCore runs it first checks if there exists a `config.ini` file. If not, it creates one.
-
-    *   **`config.ini`**: Contains ports, timeout settings, and flags for authentication. Edit this file to change the default ports or enable/disable user authentication.
+    - When the HiveCore runs it first checks if there exists a `config.ini` file. If not, it creates one.
+    - **`config.ini`**: Contains ports, timeout settings, and flags for authentication. Edit this file to change the default ports or enable/disable user authentication.
 3.  **Authentication**
+    - Some routes(requests targeting specific workers and management requests to proxy) require an `Authorization` header with the bearer token with an **Admin** role.
+    - Additionally, the configuration allows locking all requests to proxy to require a **Client** key in the `Authorization` header.
+4.  **Scaling**
+    - To scale horizontally, run additional [worker nodes](https://github.com/VakeDomen/HiveNode) (each with Ollama) and point them to the same HiveCore proxy. 
 
-    *   Endpoints require a **Bearer** token. For admin-specific endpoints, the token must belong to a key with the **Admin** role.
-4.  **Logs**
 
-    *   Logging is provided by `Logger`. Watch the console or redirect output to a file for insights into request handling, node connections, and potential errors.
-5.  **Scaling**
+Default `config.ini` example:
+```toml
+[Server]
+USER_AUTHENTICATION = false
+PROXY_PORT = 6666
+NODE_CONNECTION_PORT = 7777
+MANAGEMENT_CONNECTION_PORT = 6668
 
-    *   To scale horizontally, run additional worker nodes (each with Ollama) and point them to the same NodeServer. The NodeConnectionMonitor ensures newly connected nodes are recognized after authentication.
+[Connection]
+POLLING_NODE_CONNECTION_TIMEOUT = 10
+WORKING_NODE_CONNECTION_TIMEOUT = 300
+CONNECTION_EXCEPTION_THRESHOLD = 5
+PROXY_TIMEOUT_MS = 60000
+MESSAGE_CHUNK_BUFFER_SIZE = 16384
+
+[Database]
+DATABASE_URL = jdbc:sqlite:sqlite.db
+```
+
 
 * * *
 
 # 6. API Endpoints & Integration
 
+## Client server
+
 HiveCore opens two main http endpoints. The main inference endpoint listens on the `PROXY_PORT`(default `6666`). Every request received on will be placed in a queue to be processed by one of the workers. Valid requests to this endpoint are all inference [requests supported](https://github.com/ollama/ollama/blob/main/docs/api.md#generate-a-completion) by Ollama, that specify a target model in the body.
-## curl
+### curl
 ```bash
 curl http://example.com:6666/api/generate -d '{
   "model": "mistral-nemo",
@@ -142,7 +144,7 @@ curl http://example.com:6666/api/generate -d '{
 
 Since the requests are piped to the Ollama server, the proxy is compatible with all the main llm libraries that implement the Ollama API.
 
-## Ollama-python
+### Ollama-python
 
 Example using [Ollama-python](https://github.com/ollama/ollama-python):
 
@@ -153,7 +155,7 @@ api = GenerateAPI(base_url="http://example.com:6666", model="mistral")
 result = api.generate(prompt="Hello World", options=dict(num_tokens=10), format="json")
 ```
 
-## Langchain
+### Langchain
 
 Example using [Langchain](https://github.com/langchain-ai/langchain):
 
@@ -165,7 +167,7 @@ embedding_model = OllamaEmbeddings(base_url="example.com:6666", model='bge-m3')
 llm = OllamaLLM(base_url="example.com:6666", model='mistral-nemo')
 ```
 
-## LlamaIndex
+### LlamaIndex
 
 Example using [LlamaIndex](https://github.com/run-llama/llama_index):
 
@@ -178,7 +180,30 @@ response = llm.complete("What is the capital of France?")
 print(response)
 ```
 
-### `/queue`
+### Targeted requests
+
+By posting requests to the proxy the reuqest is put into a queue to be handled by one of the workers based on the model that is specified in the request. If however you want to target a specific worker, the proxy can forward any request to the worker Ollama server by specifying the `Node` header in the request. This however is only allowed if you have an `admin` bearer token specified in the `Authorization` header.
+
+```bash
+curl -X POST http://example.com:6666/api/generate \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer <admin token>" \
+    -H "Node: <nodename>" \
+    -d '{
+      "model": "mistral-nemo",
+      "prompt": "Why is the sky blue?"
+    }'
+
+```
+
+## Management server
+
+The second important endpoint the HiveCore exposes is the management server, running on `MANAGEMENT_CONNECTION_PORT` (default: `6668`). 
+
+All requests to this server require the `Authorization` header to be set with the admin `Bearer <token>`. The routes here are specifically made for monitoring the state and health of the HiveCore proxy and generating keys for users of the system. 
+
+### Avalible routes:
+
 
 *   **GET** `/queue`
     *   **Purpose**: Retrieve queue lengths for both model-based and node-based queues.
@@ -196,8 +221,6 @@ print(response)
     ```
 
 * * *
-
-### `/worker/connections`
 
 *   **GET** `/worker/connections`
     *   **Purpose**: Retrieve the count of active connections for each worker node. The count represents the amount of concurrent requests each worker node is able to process.
@@ -224,8 +247,6 @@ print(response)
     ```
 
 * * *
-
-### `/worker/status`
 
 *   **GET** `/worker/status`
     *   **Purpose**: View each node’s verification status (e.g., `Verified`, `Waiting`, etc.).
@@ -272,20 +293,36 @@ print(response)
 
 * * *
 
-### `/worker/pings`
-
-*   **GET** `/worker/pings`
+* **GET** `/worker/pings`
     *   **Purpose**: Check the last ping timestamps for each worker.
     *   **Responses**:
         *   **200 OK** + JSON structure with node names mapped to an array of timestamps.
     *   **Body**:
     ```json
-      
+    {
+        "worker-1xA6000-1": [
+            "2025-02-20T08:46:40.776027790",
+            "2025-02-20T08:46:40.775862321",
+            "2025-02-20T08:46:40.776019975",
+            "2025-02-20T08:46:40.775880505"
+        ],
+        "worker-2xA6000-2": [
+            "2025-02-20T08:46:40.775742978",
+            "2025-02-20T08:46:40.775864545",
+            "2025-02-20T08:46:40.760690376",
+            "2025-02-20T08:46:40.760705805"
+        ],
+        "worker-DLT-2x-1080ti-1": [
+            "2025-02-20T08:46:40.764027234",
+            "2025-02-20T08:46:40.789959810",
+            "2025-02-20T08:46:40.790090103",
+            "2025-02-20T08:46:40.764031131"
+        ],
+        ...
+    }
     ```
 
 * * *
-
-### `/worker/tags`
 
 *   **GET** `/worker/tags`
     *   **Purpose**: Retrieve the tags (models) supported by each worker node.
@@ -293,39 +330,56 @@ print(response)
         *   **200 OK** + JSON structure of node names to sets of tags.
     *   **Body**:
     ```json
-      
+    {
+        "worker-2xA6000-2": [
+            "mistral-nemo:latest",
+            "bge-m3",
+            "bge-m3:latest",
+            "mistral-nemo"
+        ],
+        "worker-3xH100": [
+            "mistral-nemo:latest",
+            "bge-m3",
+            "bge-m3:latest",
+            "mistral-nemo",
+            "deepseek-r1:671b"
+        ],
+        "worker-3080-6": [
+            "mistral-nemo:latest",
+            "bge-m3",
+            "bge-m3:latest",
+            "mistral-nemo"
+        ],
+        ...
+    }
     ```
 
 * * *
 
-### `/worker/version/hive`
-
-*   **GET** `/worker/version/hive`
-    *   **Purpose**: Shows which Hive version each worker node is running.
+*   **GET** `/worker/versions`
+    *   **Purpose**: Shows which Hive and Ollama versions each worker node is running.
     *   **Responses**:
         *   **200 OK** + JSON mapping of node names to node versions.
     *   **Body**:
     ```json
-      
+    {
+        "worker-1xA6000-1": {
+            "hive": "0.1.6",
+            "ollama": "0.5.7"
+        },
+        "worker-2xA6000-2": {
+            "hive": "0.1.6",
+            "ollama": "0.5.7"
+        },
+        "worker-2xTitan-2": {
+            "hive": "0.1.6",
+            "ollama": "0.5.7"
+        },
+        ...
+    }
     ```
 
 * * *
-
-### `/worker/version/ollama`
-
-*   **GET** `/worker/version/ollama`
-    *   **Purpose**: Shows which Ollama version each worker node is running.
-    *   **Responses**:
-        *   **200 OK** + JSON mapping of node names to Ollama versions.
-    *   **Body**:
-    ```json
-      
-    ```
-
-* * *
-
-
-### `/key`
 
 *   **GET** `/key`
 
@@ -339,65 +393,73 @@ print(response)
         {
           "id": 1,
           "name": "Admin",
-          "value": "004c0a77-4af8-48cc-8690-4e7ccb33cf08",
+          "value": "004c0a77-4af8-48cc-8690-4e7ccc33cf08",
           "role": "Admin"
         },
         {
           "id": 2,
           "name": "worker-2xA6000",
-          "value": "c228f8df-8df3-4649-a964-966bf816b50b",
+          "value": "c228f8df-8df3-4649-a964-t66bf816b50b",
           "role": "Worker"
         },
         {
           "id": 3,
           "name": "worker-2xA6000-2",
-          "value": "e5a9343c-f643-467f-b1e5-2f0b2a83c367",
+          "value": "e5a9343c-f643-467f-b1e5-2f0b2ad3c367",
           "role": "Worker"
         },
         {
           "id": 4,
           "name": "worker-cluster-16-1080ti",
-          "value": "9bd93308-448a-4588-b86d-e92476057957",
+          "value": "9bd93308-448a-4588-b86d-e92d76057957",
           "role": "Worker"
         },
         {
           "id": 5,
           "name": "worker-cluster-17-1080ti",
-          "value": "4628b1b9-7d19-4713-8456-ca9a5cf9a6f4",
+          "value": "4628b1b9-7d19-4713-8456-ca9a5ca9a6f4",
           "role": "Worker"
         } 
+        ...
       ]
       ```
 *   **POST** `/key`
 
-    *   **Purpose**: Insert a new key into the database.
-    *   **Body** (JSON):
-
+    - **Purpose**: Insert a new key into the database.
+    - **Body** (JSON):
+        - possible roles: `Admin`, `Worker` and `Client`
         ```json
-        {   "name": "MyNodeKey",   "role": "Admin"  }
+        { 
+          "name": "MyNodeKey",   
+          "role": "Admin" 
+        }
         ```
 
-    *   **Responses**:
-        *   **200 OK** + newly generated key value if successful.
-        *   **400 Bad Request** if an error occurs (e.g., duplicate name).
+    - **Responses**:
+        - **200 OK** + newly generated key value if successful.
+        ```text
+        4628b1b9-7d19-4713-8456-ca9a5ca9a6f4
+        ```
+        - **400 Bad Request** if an error occurs (e.g., duplicate name).
 
 * * *
 
+# 7. Connecting workers
+To connect worker nodes to the proxy see project [HiveNode](https://github.com/VakeDomen/HiveNode). The worker should have [Ollama](https://ollama.com/download) server installed and a HiveNode. The nodes connect to the third exposed port `NODE_CONNECTION_PORT` (default: `7777`). The node should have a valid `Worker` key generated by the admin of HiveCore. 
 
-# 7. Contributing
+# 8. Contributing
 
 We welcome contributions! Please open an **issue** to discuss proposed changes before submitting a pull request. Make sure to:
 
 *   Keep code style consistent.
-*   Write tests for new or modified functionality.
 *   Update documentation if you change or add features.
 
 * * *
 
-# 8. License
+# 9. License
 
 This project is distributed under the **MIT License**. See the LICENSE file for more details.
 
 * * *
 
-Thank you for considering **HiveCore** for your Ollama proxy needs! If you have questions, encounter any issues, or want to contribute, feel free to open an issue or submit a pull request on the [GitHub repository](https://github.com/VakeDomen/HiveCore). We look forward to collaborating with you!
+Thank you for considering **HiveCore** for your Ollama proxy needs! If you have questions, encounter any issues, or want to contribute, feel free to open an issue or submit a pull request. We look forward to collaborating with you!
