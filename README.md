@@ -108,7 +108,7 @@ By simplifying connectivity requirements, HiveCore eliminates the need for compl
 
 
 Default `config.ini` example:
-```toml
+```
 [Server]
 USER_AUTHENTICATION = false
 PROXY_PORT = 6666
@@ -317,8 +317,7 @@ All requests to this server require the `Authorization` header to be set with th
             "2025-02-20T08:46:40.789959810",
             "2025-02-20T08:46:40.790090103",
             "2025-02-20T08:46:40.764031131"
-        ],
-        ...
+        ]
     }
     ```
 
@@ -349,8 +348,7 @@ All requests to this server require the `Authorization` header to be set with th
             "bge-m3",
             "bge-m3:latest",
             "mistral-nemo"
-        ],
-        ...
+        ]
     }
     ```
 
@@ -374,8 +372,7 @@ All requests to this server require the `Authorization` header to be set with th
         "worker-2xTitan-2": {
             "hive": "0.1.6",
             "ollama": "0.5.7"
-        },
-        ...
+        }
     }
     ```
 
@@ -420,7 +417,6 @@ All requests to this server require the `Authorization` header to be set with th
           "value": "4628b1b9-7d19-4713-8456-ca9a5ca9a6f4",
           "role": "Worker"
         } 
-        ...
       ]
       ```
 *   **POST** `/key`
