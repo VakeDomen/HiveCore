@@ -10,10 +10,13 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="1f0778ec-972c-44d7-9355-8cf9d23e7ef0" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/src/main/java/upr/famnit/components/WorkerCommand.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/upr/famnit/components/Connection.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/upr/famnit/components/Connection.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/upr/famnit/components/ResponseFactory.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/upr/famnit/components/ResponseFactory.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/upr/famnit/components/ClientRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/upr/famnit/components/ClientRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/upr/famnit/components/RequestFactory.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/upr/famnit/components/RequestFactory.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/upr/famnit/components/RequestQue.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/upr/famnit/components/RequestQue.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/upr/famnit/managers/Overseer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/upr/famnit/managers/Overseer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/upr/famnit/managers/connections/Management.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/upr/famnit/managers/connections/Management.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/upr/famnit/managers/connections/Worker.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/upr/famnit/managers/connections/Worker.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />

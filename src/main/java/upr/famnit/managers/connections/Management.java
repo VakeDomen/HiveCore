@@ -101,6 +101,7 @@ public class Management implements Runnable {
                 case "/worker/pings" -> handleWorkerPingsRoute();
                 case "/worker/tags" -> handleWorkerTagsRoute();
                 case "/worker/versions" -> handleWorkerHiveVersionRoute();
+                case "/worker/command" -> handleWorkerCommandRoute();
                 case "/queue" -> handleQueueRoute();
                 case null, default -> respond(ResponseFactory.NotFound());
             }
@@ -110,6 +111,8 @@ public class Management implements Runnable {
         }
         Logger.success("Management request finished");
     }
+
+
 
     /**
      * Handles requests to the "/queue" route, managing operations related to the request queue.
@@ -197,6 +200,25 @@ public class Management implements Runnable {
         switch (clientRequest.getRequest().getMethod()) {
             case "GET" -> handleWorkersHiveVersionRequest();
             case null, default -> respond(ResponseFactory.NotFound());
+        }
+    }
+
+    private void handleWorkerCommandRoute() throws IOException  {
+        switch (clientRequest.getRequest().getMethod()) {
+            case "POST" -> handleWorkersCommandRequest();
+            case null, default -> respond(ResponseFactory.NotFound());
+        }
+    }
+
+    private void handleWorkersCommandRequest() throws IOException {
+        Gson gson = new GsonBuilder().create();
+        String body = new String(clientRequest.getRequest().getBody(), StandardCharsets.UTF_8);
+        WorkerCommand workerCommand = gson.fromJson(body, WorkerCommand.class);
+        Logger.info("Recieved worker (" + workerCommand.worker + ") command: " + workerCommand.command);
+        Response response = Overseer.sendCommand(workerCommand, clientSocket);
+        // something wrong.
+        if (response != null) {
+            respond(response);
         }
     }
 

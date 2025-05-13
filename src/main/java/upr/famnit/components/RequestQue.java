@@ -59,6 +59,31 @@ public class RequestQue {
         return null;
     }
 
+    public static ClientRequest getNodeTask(String nodeName) {
+        ConcurrentLinkedQueue<ClientRequest> specificNodeQue = nodeQue.get(nodeName);
+        if (specificNodeQue != null) {
+            ClientRequest request = specificNodeQue.poll();
+            if (request != null) {
+                request.stampQueueLeave(nodeName);
+                return request;
+            }
+        }
+
+        return null;
+    }
+
+    public static ClientRequest getModelTask(String modelName, String nodeName) {
+        ConcurrentLinkedQueue<ClientRequest> specificModelQue = modelQue.get(modelName);
+        if (specificModelQue != null) {
+            ClientRequest request = specificModelQue.poll();
+            if (request != null) {
+                request.stampQueueLeave(nodeName);
+                return request;
+            }
+        }
+        return null;
+    }
+
     /**
      * Adds a client request task to the appropriate queue based on its headers.
      *
@@ -79,6 +104,10 @@ public class RequestQue {
         } else {
             return addToQueByModel(request);
         }
+    }
+
+    public static boolean addHiveTask(ClientRequest request, String worker) {
+        return addToQueByNode(request, worker);
     }
 
     /**
@@ -119,6 +148,19 @@ public class RequestQue {
     private static boolean addToQueByNode(ClientRequest request) {
         request.stampQueueEnter();
         String nodeName = request.getRequest().getHeaders().get("node");
+
+        if (nodeName == null) {
+            Logger.warn("Unable to determine target node for request.");
+            return false;
+        }
+
+        nodeQue.computeIfAbsent(nodeName, k -> new ConcurrentLinkedQueue<>()).add(request);
+        Logger.info("Request for worker node " + nodeName + " added to the queue. (" + request.getClientSocket().getRemoteSocketAddress() + ")");
+        return true;
+    }
+
+    private static boolean addToQueByNode(ClientRequest request, String nodeName) {
+        request.stampQueueEnter();
 
         if (nodeName == null) {
             Logger.warn("Unable to determine target node for request.");

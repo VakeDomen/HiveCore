@@ -7,6 +7,7 @@ import upr.famnit.util.Logger;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.Socket;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -16,6 +17,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import upr.famnit.util.Config;
 import upr.famnit.util.StreamUtil;
+
+import static upr.famnit.components.RequestFactory.UpdateWorkerRequest;
 
 /**
  * The {@code NodeConnectionMonitor} class is responsible for monitoring and managing
@@ -74,6 +77,8 @@ public class Overseer extends Thread {
     public Overseer() {
         nodes = new ArrayList<>();
     }
+
+
 
     /**
      * The main execution method for the {@code NodeConnectionMonitor} thread.
@@ -295,6 +300,47 @@ public class Overseer extends Thread {
             nodes.add(worker);
         } finally {
             writeLock.unlock();
+        }
+    }
+
+    public static Response sendCommand(WorkerCommand workerCommand, Socket senderRequest) {
+        readLock.lock();
+        try {
+            TreeMap<String, Integer> names = Overseer.getActiveConnections();
+            if (!names.containsKey(workerCommand.worker)) {
+                return ResponseFactory.NotFound();
+            }
+
+            Worker workerRef = null;
+            for (Worker w : nodes) {
+                if (w.getData().getNodeName().equals(workerCommand.worker)) {
+                    workerRef = w;
+                    break;
+                }
+            }
+
+            if (workerRef == null) {
+                return ResponseFactory.NotFound();
+            }
+
+            Request r = null;
+            switch (workerCommand.command) {
+                case "UPDATE" -> {
+                    r = RequestFactory.UpdateWorkerRequest();
+                }
+                default -> {
+                    return ResponseFactory.MethodNotAllowed();
+                }
+            }
+
+
+            ClientRequest request = new ClientRequest(senderRequest, r);
+            RequestQue.addHiveTask(request, workerCommand.worker);
+            return null;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        } finally {
+            readLock.unlock();
         }
     }
 

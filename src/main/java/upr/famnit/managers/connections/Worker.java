@@ -13,6 +13,7 @@ import java.net.Socket;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * The {@code NodeConnectionManager} class handles connections from worker nodes,
@@ -52,6 +53,8 @@ public class Worker extends Thread {
      * The {@link NodeData} object storing data and status information about the connected node.
      */
     private final NodeData data;
+
+    private ConcurrentLinkedQueue<ClientRequest> messagesToSend = new ConcurrentLinkedQueue<ClientRequest>();
 
     /**
      * Constructs a new {@code NodeConnectionManager} by accepting a connection from the given server socket.
@@ -372,8 +375,13 @@ public class Worker extends Thread {
             return null;
         }
 
+        ClientRequest task = RequestQue.getNodeTask(data.getNodeName());
+        if (task != null) {
+            return task;
+        }
+
         for (int i = 0; i < tags.length; i++) {
-            ClientRequest clientRequest = RequestQue.getTask(tags[i], data.getNodeName());
+            ClientRequest clientRequest = RequestQue.getModelTask(tags[i], data.getNodeName());
             if (clientRequest != null) {
                 // Rotate the tags array to prioritize the model just used
                 if (i > 0) {
@@ -430,5 +438,9 @@ public class Worker extends Thread {
             return new ArrayList<>();
         }
         return new ArrayList<>(List.of(tagsString.split(";")));
+    }
+
+    public Connection getConnection() {
+        return connection;
     }
 }

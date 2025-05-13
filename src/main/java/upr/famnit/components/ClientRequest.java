@@ -96,6 +96,12 @@ public class ClientRequest {
         this.authorize();
     }
 
+    public ClientRequest(Socket clientSocket, Request request) throws IOException {
+        this.clientSocket = clientSocket;
+        this.clientSocket.setSoTimeout(PROXY_TIMEOUT_MS);
+        this.request = request;
+    }
+
     /**
      * Authorizes the client's request based on the provided authorization headers.
      *

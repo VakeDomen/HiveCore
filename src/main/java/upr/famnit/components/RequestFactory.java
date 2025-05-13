@@ -49,6 +49,16 @@ public class RequestFactory {
         );
     }
 
+    public static Request UpdateWorkerRequest() {
+        return new Request(
+                "HIVE",
+                "UPDATE_OLLAMA",
+                "/",
+                null,
+                null
+        );
+    }
+
     /**
      * Creates a {@link Request} instance representing an authentication response.
      *
