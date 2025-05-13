@@ -137,7 +137,7 @@ public class Worker extends Thread {
      *
      * <p>This method logs the error and closes the connection, as it indicates a protocol violation or disconnection.</p>
      *
-     * @param request the {@link Request} that was being received when the exception occurred (may be {@code null})
+     * @param request the {@link Request} that was being received when the exception occurred (maybe {@code null})
      * @param e       the {@link IOException} that was thrown
      */
     private void handleRequestException(Request request, IOException e) {
@@ -164,19 +164,26 @@ public class Worker extends Thread {
             waitForAuthRequestAndValidate();
             Logger.status("Worker authenticated: " + data.getNodeName());
             connection.send(RequestFactory.AuthenticationResponse(data.getNodeName()));
+
         } catch (IOException e) {
             data.setVerificationStatus(VerificationStatus.Rejected);
             Logger.error("IOException when authenticating node: " + e.getMessage());
             throw e;
+
         } catch (InterruptedException e) {
             data.setVerificationStatus(VerificationStatus.Rejected);
             Logger.error("Authenticating node interrupted: " + e.getMessage());
             Thread.currentThread().interrupt();
             throw new IOException("Authentication interrupted", e);
+
+        } catch (Exception e) {
+            data.setVerificationStatus(VerificationStatus.Rejected);
+            throw new IOException("Unknown authentication exception: " + e.getMessage());
         }
 
         if (data.getVerificationStatus() != VerificationStatus.Verified) {
-            closeConnection();
+            data.setVerificationStatus(VerificationStatus.Rejected);
+            throw new IOException("Authentication not verified: " + data.getVerificationStatus());
         }
     }
 

@@ -10,6 +10,9 @@ import java.io.OutputStream;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import upr.famnit.util.Config;
 import upr.famnit.util.StreamUtil;
@@ -59,7 +62,9 @@ public class Overseer extends Thread {
     /**
      * An object used as a lock for synchronizing access to the {@code nodes} list.
      */
-    private static final Object nodeLock = new Object();
+    private static final ReadWriteLock nodeLock = new ReentrantReadWriteLock();
+    private static final Lock readLock = nodeLock.readLock();
+    private static final Lock writeLock = nodeLock.writeLock();
 
     /**
      * Constructs a new {@code NodeConnectionMonitor} instance.
@@ -88,10 +93,8 @@ public class Overseer extends Thread {
         Thread.currentThread().setName("Overseer");
         Logger.status("Monitor starting...");
         while (monitoring) {
-            synchronized (nodeLock) {
-                checkOnWorkers();
-            }
-
+            System.out.print(".");
+            checkOnWorkers();
             checkOnQueue();
 
             try {
@@ -122,19 +125,27 @@ public class Overseer extends Thread {
     private void checkOnWorkers() {
         ArrayList<Worker> toRemove = new ArrayList<>();
 
-        for (Worker node : nodes) {
-            NodeStatus status = checkNode(node);
-
-            // Stop connection if violated any rules
-            if (status != NodeStatus.Valid) {
-                node.closeConnection();
-                Logger.warn("Closing node connection (" + node.getData().getNodeName() + ") due to: " + status);
-                toRemove.add(node);
+        readLock.lock();
+        try {
+            for (Worker node : nodes) {
+                NodeStatus status = checkNode(node);
+                if (status != NodeStatus.Valid) {
+                    Logger.warn("Closing node connection (" + node.getData().getNodeName() + ") due to: " + status);
+                    toRemove.add(node);
+                }
             }
+        } finally {
+            readLock.unlock();
         }
 
-        for (Worker nodeToRemove : toRemove) {
-            nodes.remove(nodeToRemove);
+        writeLock.lock();
+        try {
+            for (Worker nodeToRemove : toRemove) {
+                nodeToRemove.closeConnection();
+                nodes.remove(nodeToRemove);
+            }
+        } finally {
+            writeLock.unlock();
         }
     }
 
@@ -245,11 +256,9 @@ public class Overseer extends Thread {
         ArrayList<String> nodeNames = new ArrayList<>();
         Set<String> modelNames = new HashSet<>();
 
-        synchronized (nodeLock) {
-            for (Worker node : nodes) {
-                nodeNames.add(node.getName());
-                modelNames.addAll(node.getTags());
-            }
+        for (Worker node : nodes) {
+            nodeNames.add(node.getName());
+            modelNames.addAll(node.getTags());
         }
 
         ClientRequest reqToReject = RequestQue.getUnhandlableTask(nodeNames, modelNames);
@@ -275,8 +284,11 @@ public class Overseer extends Thread {
      * @param manager the {@link Worker} instance representing the worker node to be added
      */
     public void addNode(Worker manager) {
-        synchronized (nodeLock) {
+        writeLock.lock();
+        try {
             nodes.add(manager);
+        } finally {
+            writeLock.unlock();
         }
     }
 
@@ -296,7 +308,8 @@ public class Overseer extends Thread {
      */
     public static TreeMap<String, Integer> getActiveConnections() {
         TreeMap<String, Integer> connectedNodes = new TreeMap<>();
-        synchronized (nodeLock) {
+        readLock.lock();
+        try {
             for (Worker node : nodes) {
                 String name = node.getData().getNodeName();
                 if (name == null) {
@@ -305,6 +318,8 @@ public class Overseer extends Thread {
                 connectedNodes.putIfAbsent(name, 0);
                 connectedNodes.put(name, connectedNodes.get(name) + 1);
             }
+        } finally {
+            readLock.unlock();
         }
         return connectedNodes;
     }
@@ -316,7 +331,8 @@ public class Overseer extends Thread {
      */
     public static TreeMap<String, ArrayList<VerificationStatus>> getConnectionsStatus() {
         TreeMap<String, ArrayList<VerificationStatus>> connectedNodes = new TreeMap<>();
-        synchronized (nodeLock) {
+        readLock.lock();
+        try {
             for (Worker node : nodes) {
                 String name = node.getData().getNodeName();
                 if (name == null) {
@@ -325,6 +341,8 @@ public class Overseer extends Thread {
                 connectedNodes.putIfAbsent(name, new ArrayList<>());
                 connectedNodes.get(name).add(node.getData().getVerificationStatus());
             }
+        } finally {
+            readLock.unlock();
         }
         return connectedNodes;
     }
@@ -336,7 +354,8 @@ public class Overseer extends Thread {
      */
     public static TreeMap<String, ArrayList<String>> getLastPings() {
         TreeMap<String, ArrayList<String>> connectedNodes = new TreeMap<>();
-        synchronized (nodeLock) {
+        readLock.lock();
+        try {
             for (Worker node : nodes) {
                 String name = node.getData().getNodeName();
                 if (name == null) {
@@ -345,6 +364,8 @@ public class Overseer extends Thread {
                 connectedNodes.putIfAbsent(name, new ArrayList<>());
                 connectedNodes.get(name).add(node.getData().getLastPing().toString());
             }
+        } finally {
+            readLock.unlock();
         }
         return connectedNodes;
     }
@@ -356,7 +377,8 @@ public class Overseer extends Thread {
      */
     public static TreeMap<String, Set<String>> getTags() {
         TreeMap<String, Set<String>> connectedNodes = new TreeMap<>();
-        synchronized (nodeLock) {
+        readLock.lock();
+        try {
             for (Worker node : nodes) {
                 String name = node.getData().getNodeName();
                 if (name == null) {
@@ -365,6 +387,8 @@ public class Overseer extends Thread {
                 connectedNodes.putIfAbsent(name, new HashSet<>());
                 connectedNodes.get(name).addAll(node.getTags());
             }
+        } finally {
+            readLock.unlock();
         }
         return connectedNodes;
     }
@@ -376,7 +400,8 @@ public class Overseer extends Thread {
      */
     public static TreeMap<String, WorkerVersion> getNodeVersions() {
         TreeMap<String, WorkerVersion> connectedNodes = new TreeMap<>();
-        synchronized (nodeLock) {
+        readLock.lock();
+        try {
             for (Worker node : nodes) {
                 String name = node.getData().getNodeName();
                 if (name == null) {
@@ -388,6 +413,8 @@ public class Overseer extends Thread {
                 }
                 connectedNodes.put(name, version);
             }
+        } finally {
+            readLock.unlock();
         }
         return connectedNodes;
     }

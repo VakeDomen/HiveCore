@@ -137,18 +137,16 @@ public class Connection {
      * @return {@code true} if the connection was successfully closed; {@code false} otherwise
      */
     public boolean close() {
-        synchronized (socketLock) {
-            try {
-                streamFromNode.close();
-                streamToNode.close();
-                nodeSocket.close();
-                connectionOpen = false;
-                return true;
+        try {
+            streamFromNode.close();
+            streamToNode.close();
+            nodeSocket.close();
+            connectionOpen = false;
+            return true;
 
-            } catch (IOException e) {
-                Logger.error("Failed to close connection: " + e.getMessage());
-                return false;
-            }
+        } catch (IOException e) {
+            Logger.error("Failed to close connection: " + e.getMessage());
+            return false;
         }
 
     }
