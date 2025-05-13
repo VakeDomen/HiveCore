@@ -11,6 +11,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 
+import static java.nio.charset.StandardCharsets.US_ASCII;
+
 /**
  * The {@code Connection} class manages the communication between the server and a node via a socket.
  *
@@ -37,14 +39,7 @@ public class Connection {
      *
      * <p>Used to ensure that only one thread can perform socket I/O operations at a time.</p>
      */
-    private final Object socketLock = new Object();
-
-    /**
-     * Lock object for synchronizing access to the connection's state.
-     *
-     * <p>Used to manage the state of the connection, such as whether it is open or closed.</p>
-     */
-    private final Object stateLock = new Object();
+    private final ReentrantLock socketLock = new ReentrantLock();
 
     /**
      * The socket representing the connection to the node.
@@ -67,7 +62,7 @@ public class Connection {
      * <p>This flag is used to manage the lifecycle of the connection, ensuring that operations
      * are only performed on open connections.</p>
      */
-    private boolean connectionOpen;
+    private volatile boolean connectionOpen;
 
     /**
      * Constructs a new {@code Connection} instance using the provided socket.
@@ -94,9 +89,7 @@ public class Connection {
      * @return {@code true} if the connection is open and the socket is connected; {@code false} otherwise
      */
     public boolean isFine() {
-        synchronized (stateLock) {
-            return connectionOpen && nodeSocket.isConnected();
-        }
+        return connectionOpen && nodeSocket.isConnected();
     }
 
     /**
@@ -107,9 +100,7 @@ public class Connection {
      * @return the internet address of the node as a {@code String}
      */
     public String getInetAddress() {
-        synchronized (stateLock) {
-            return nodeSocket.getInetAddress().toString();
-        }
+        return nodeSocket.getInetAddress().toString();
     }
 
     /**
@@ -122,8 +113,11 @@ public class Connection {
      * @throws IOException if an I/O error occurs while reading the request
      */
     public Request waitForRequest() throws IOException {
-        synchronized (socketLock) {
+        socketLock.lock();
+        try {
             return new Request(nodeSocket);
+        } finally {
+            socketLock.unlock();
         }
     }
 
@@ -161,8 +155,12 @@ public class Connection {
      * @throws IOException if an I/O error occurs while sending the request
      */
     public void send(Request request) throws IOException {
-        synchronized (socketLock) {
+        socketLock.lock();
+        try {
             StreamUtil.sendRequest(streamToNode, request);
+
+        } finally {
+            socketLock.unlock();
         }
     }
 
@@ -183,53 +181,80 @@ public class Connection {
      * @param clientRequest the {@link ClientRequest} containing the client's request and connection details
      * @throws IOException if an I/O error occurs during the proxying process
      */
-    public void proxyRequestToNode(ClientRequest clientRequest) throws IOException {
-        synchronized (socketLock) {
-            OutputStream streamToClient = clientRequest.getClientSocket().getOutputStream();
+    public void proxyRequestToNode(ClientRequest clientRequest) {
+        OutputStream streamToClient = null;
+        boolean headersWritten = false;
+        socketLock.lock();
+        try {
+            streamToClient = clientRequest.getClientSocket().getOutputStream();
 
-            // Forward the client's request to the node
+            // 1. forward client→node
             StreamUtil.sendRequest(streamToNode, clientRequest.getRequest());
-            // Logger.log("Request forwarded to Node.", LogLevel.network);
 
-            // Read the status line from the node's response
+            // 2. read node status line
             String statusLine = StreamUtil.readLine(streamFromNode);
             if (statusLine == null || statusLine.isEmpty()) {
                 throw new IOException("Failed to read status line from node");
             }
-            String[] statusLineTokens = statusLine.split(" ", 3);
-            if (statusLineTokens.length == 3 && !statusLineTokens[1].equals("200")) {
-                Logger.warn("Response not 200: " + statusLine);
+            String[] tokens = statusLine.split(" ", 3);
+            if (tokens.length == 3 && !tokens[1].equals("200")) {
+                Logger.warn("Node responded non-200: " + statusLine);
                 clientRequest.getRequest().log();
             }
 
-            // Forward the status line to the client
-            streamToClient.write((statusLine + "\r\n").getBytes(StandardCharsets.US_ASCII));
-
-            // Read the response headers from the node
-            Map<String, String> responseHeaders = StreamUtil.readHeaders(streamFromNode);
-            // Logger.log("Response headers: " + responseHeaders);
-
-            // Forward headers to the client
-            for (Map.Entry<String, String> header : responseHeaders.entrySet()) {
-                String headerLine = header.getKey() + ": " + header.getValue();
-                streamToClient.write((headerLine + "\r\n").getBytes(StandardCharsets.US_ASCII));
+            // 3. write status + headers
+            streamToClient.write((statusLine + "\r\n").getBytes(US_ASCII));
+            Map<String,String> headers = StreamUtil.readHeaders(streamFromNode);
+            for (Map.Entry<String,String> h : headers.entrySet()) {
+                streamToClient.write((h.getKey()+": "+h.getValue()+"\r\n")
+                        .getBytes(US_ASCII));
             }
-            streamToClient.write("\r\n".getBytes(StandardCharsets.US_ASCII));
+            streamToClient.write("\r\n".getBytes(US_ASCII));
             streamToClient.flush();
+            headersWritten = true;
 
-            // Determine how to handle the response body based on headers
-            if (responseHeaders.containsKey("transfer-encoding") &&
-                    responseHeaders.get("transfer-encoding").equalsIgnoreCase("chunked")) {
+            // 4. proxy body
+            if ("chunked".equalsIgnoreCase(headers.get("transfer-encoding"))) {
                 StreamUtil.readAndForwardChunkedBody(streamFromNode, streamToClient);
-            } else if (responseHeaders.containsKey("content-length")) {
-                int contentLength = Integer.parseInt(responseHeaders.get("content-length"));
-                StreamUtil.readAndForwardFixedLengthBody(streamFromNode, streamToClient, contentLength);
+            } else if (headers.containsKey("content-length")) {
+                int len = Integer.parseInt(headers.get("content-length"));
+                StreamUtil.readAndForwardFixedLengthBody(
+                        streamFromNode, streamToClient, len);
             } else {
                 StreamUtil.readAndForwardUntilEOF(streamFromNode, streamToClient);
             }
-
-            // Mark the client's request as complete
+        }
+        catch (IOException ioe) {
+            Logger.error("Proxying request failed: " + ioe.getMessage() +
+                    "\nRequest time in queue: " + String.format("%,d", clientRequest.queTime()) + " ms" +
+                    "\nRequest proxy time: " + String.format("%,d", clientRequest.proxyTime()) + " ms" +
+                    "\nTotal time: " + String.format("%,d", clientRequest.totalTime()) + " ms"
+            );
+            if (streamToClient != null && !headersWritten) {
+                try {
+                    // send simple 502 if we failed before writing headers
+                    StreamUtil.sendResponse(streamToClient, ResponseFactory.BadGateway());
+                } catch (IOException ignored) {
+                    Logger.error("Could not reply with Bad Gateway!");
+                }
+            }
+        }
+        catch (RuntimeException rte) {
+            Logger.error("Proxying request failed: " + rte.getMessage() +
+                    "\nRequest time in queue: " + String.format("%,d", clientRequest.queTime()) + " ms" +
+                    "\nRequest proxy time: " + String.format("%,d", clientRequest.proxyTime()) + " ms" +
+                    "\nTotal time: " + String.format("%,d", clientRequest.totalTime()) + " ms"
+            );
+            try {
+                StreamUtil.sendResponse(streamToClient, ResponseFactory.InternalServerError());
+            } catch (IOException e) {
+                Logger.error("Could not reply with internal server error!");
+            }
+        }
+        finally {
+            socketLock.unlock();
             clientRequest.stampResponseFinish();
         }
     }
+
 }

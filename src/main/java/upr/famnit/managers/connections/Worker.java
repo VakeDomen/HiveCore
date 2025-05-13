@@ -232,7 +232,11 @@ public class Worker extends Thread {
         Thread.currentThread().setName(data.getNodeName());
 
 
+        long deadline = System.currentTimeMillis() + 10_000;
         while (data.getVerificationStatus() == VerificationStatus.Waiting) {
+            if (System.currentTimeMillis() > deadline) {
+                throw new IOException("Timed out waiting for Overseer to verify node");
+            }
             Thread.sleep(50);
         }
     }
@@ -297,24 +301,13 @@ public class Worker extends Thread {
         }
 
         data.setVerificationStatus(VerificationStatus.Working);
-        try {
-            connection.proxyRequestToNode(clientRequest);
-            Logger.success("Request handled by: " + data.getNodeName() +
-                    "\nRequest time in queue: " + String.format("%,d", clientRequest.queTime()) + " ms" +
-                    "\nRequest proxy time: " + String.format("%,d", clientRequest.proxyTime()) + " ms" +
-                    "\nTotal time: " + String.format("%,d", clientRequest.totalTime()) + " ms"
-            );
-        } catch (IOException e) {
-            Logger.error("Proxying request failed: " + e.getMessage() +
-                    "\nRequest time in queue: " + String.format("%,d", clientRequest.queTime()) + " ms" +
-                    "\nRequest proxy time: " + String.format("%,d", clientRequest.proxyTime()) + " ms" +
-                    "\nTotal time: " + String.format("%,d", clientRequest.totalTime()) + " ms"
-            );
-            StreamUtil.sendResponse(
-                    clientRequest.getClientSocket().getOutputStream(),
-                    ResponseFactory.BadRequest()
-            );
-        }
+        connection.proxyRequestToNode(clientRequest);
+        Logger.success("Request handled by: " + data.getNodeName() +
+                "\nRequest time in queue: " + String.format("%,d", clientRequest.queTime()) + " ms" +
+                "\nRequest proxy time: " + String.format("%,d", clientRequest.proxyTime()) + " ms" +
+                "\nTotal time: " + String.format("%,d", clientRequest.totalTime()) + " ms"
+        );
+
         data.setVerificationStatus(VerificationStatus.CompletedWork);
     }
 

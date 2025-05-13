@@ -204,4 +204,28 @@ public class ResponseFactory {
                 )
         );
     }
+
+    public static Response BadGateway() {
+        return new Response(
+                "HTTP/1.1",
+                502,
+                "Bad Gateway",
+                Map.of(
+                        "Content-Length", "0",
+                        "Connection", "close"
+                )
+        );
+    }
+
+    public static Response InternalServerError() {
+        return new Response(
+                "HTTP/1.1",
+                500,
+                "Internal Server Error",
+                Map.of(
+                        "Content-Length", "0",
+                        "Connection", "close"
+                )
+        );
+    }
 }

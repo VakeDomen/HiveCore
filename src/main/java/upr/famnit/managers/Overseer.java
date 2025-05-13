@@ -224,13 +224,19 @@ public class Overseer extends Thread {
         String nodeNonce = node.getData().getNonce();
 
         for (Worker existingNode : nodes) {
-            if (existingNode.getData().getVerificationStatus() != VerificationStatus.Verified) {
+            VerificationStatus existingNodeStatus = existingNode.getData().getVerificationStatus();
+
+            if (existingNodeStatus != VerificationStatus.Verified) {
                 continue;
             }
 
+            String existingNodeName = existingNode.getData().getNodeName();
+            String existingNodeNonce = existingNode.getData().getNonce();
             // If the same node name exists with a different nonce, reject the connection
-            if (existingNode.getData().getNodeName().equals(nodeName) &&
-                    !existingNode.getData().getNonce().equals(nodeNonce)) {
+            if (
+                    existingNodeName.equals(nodeName) &&
+                    !existingNodeNonce.equals(nodeNonce)
+            ) {
                 node.getData().setVerificationStatus(VerificationStatus.Rejected);
                 return NodeStatus.InvalidNonce;
             }
@@ -281,12 +287,12 @@ public class Overseer extends Thread {
      *
      * <p>This method ensures that the addition is thread-safe by synchronizing on the {@code nodeLock}.</p>
      *
-     * @param manager the {@link Worker} instance representing the worker node to be added
+     * @param worker the {@link Worker} instance representing the worker node to be added
      */
-    public void addNode(Worker manager) {
+    public void addNode(Worker worker) {
         writeLock.lock();
         try {
-            nodes.add(manager);
+            nodes.add(worker);
         } finally {
             writeLock.unlock();
         }
