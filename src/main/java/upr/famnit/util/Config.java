@@ -76,6 +76,15 @@ public class Config {
     public static int WORKING_NODE_CONNECTION_TIMEOUT = 300;
 
     /**
+     * Number of seconds to wait before killing the connection to a worker node.
+     *
+     * <p>This timeout applies to nodes that are in WORKING status (node request timeouts).
+     * It represents the seconds between the last message received from the worker node. If there
+     * is no valid request completed within the specified time, the connection will be closed.</p>
+     */
+    public static int SETTING_UP_NODE_CONNECTION_TIMEOUT = 300;
+
+    /**
      * Number of allowed exceptions when communicating with an unstable worker node.
      *
      * <p>If the threshold is reached, the connection is terminated to prevent further issues.</p>

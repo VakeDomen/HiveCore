@@ -191,6 +191,14 @@ public class Overseer extends Thread {
         long elapsedSeconds = sinceLastPing.getSeconds();
 
         switch (node.getData().getVerificationStatus()) {
+            case SettingUp:
+                if (elapsedSeconds > Config.SETTING_UP_NODE_CONNECTION_TIMEOUT) {
+                    Logger.warn("Node " + node.getConnection().getInetAddress() +
+                            " failed to authenticate within " + Config.SETTING_UP_NODE_CONNECTION_TIMEOUT +
+                            "s, closing");
+                    return NodeStatus.Timeout;
+                }
+                break;
             case Polling:
             case CompletedWork:
                 if (elapsedSeconds > Config.POLLING_NODE_CONNECTION_TIMEOUT) {

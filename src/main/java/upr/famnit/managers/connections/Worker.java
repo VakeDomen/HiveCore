@@ -304,6 +304,11 @@ public class Worker extends Thread {
         }
 
         data.setVerificationStatus(VerificationStatus.Working);
+//        if (request.getProtocol().equals("HIVE")) {
+//            connection.send(clientRequest.getRequest());
+//        } else {
+//
+//        }
         connection.proxyRequestToNode(clientRequest);
         Logger.success("Request handled by: " + data.getNodeName() +
                 "\nRequest time in queue: " + String.format("%,d", clientRequest.queTime()) + " ms" +
