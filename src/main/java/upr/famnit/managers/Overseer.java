@@ -98,7 +98,6 @@ public class Overseer extends Thread {
         Thread.currentThread().setName("Overseer");
         Logger.status("Monitor starting...");
         while (monitoring) {
-            System.out.print(".");
             checkOnWorkers();
             checkOnQueue();
 
