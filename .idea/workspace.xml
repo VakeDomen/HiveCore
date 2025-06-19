@@ -11,9 +11,6 @@
   <component name="ChangeListManager">
     <list default="true" id="1f0778ec-972c-44d7-9355-8cf9d23e7ef0" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/upr/famnit/managers/Overseer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/upr/famnit/managers/Overseer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/upr/famnit/managers/connections/Worker.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/upr/famnit/managers/connections/Worker.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/upr/famnit/util/Config.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/upr/famnit/util/Config.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -63,7 +60,7 @@
     &quot;git-widget-placeholder&quot;: &quot;master&quot;,
     &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
     &quot;last_opened_file_path&quot;: &quot;/home/vake/IdeaProjects/FTP&quot;,
-    &quot;project.structure.last.edited&quot;: &quot;Project&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Libraries&quot;,
     &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
     &quot;project.structure.side.proportion&quot;: &quot;0.16486752&quot;,
     &quot;settings.editor.selected.configurable&quot;: &quot;reference.settings.project.maven.importing&quot;

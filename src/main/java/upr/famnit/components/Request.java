@@ -115,6 +115,9 @@ public class Request {
             throw new SocketException("Socket closed or not connected");
         }
 
+        // 5min timeout
+        socket.setSoTimeout(5 * 60 * 1000);
+
         InputStream clientInputStream = socket.getInputStream();
 
         // Read the client's request line
